@@ -2,8 +2,10 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <tchar.h>
+#include <vector>
 #include <functional>
 #include <tuple>
+#include <thread>
 #include <cstdlib>
 #include <cassert>
 using namespace std;
@@ -265,6 +267,11 @@ class Game
     Board* subBoard ;
 
 public:
+    const Board& GetBoard() const
+    {
+        return *mainBoard;
+    }
+
     Board& GetBoard()
     {
         return *mainBoard;
@@ -310,6 +317,8 @@ class Window
 {
     HWND handle;
 
+    //vector<UINT> userMessages;
+
 public:
     Window() : handle(nullptr)
     {}
@@ -333,10 +342,15 @@ public:
         ::SetTimer(handle, timerId, timeoutMilliseconds, nullptr);
     }
 
-    void Invalidate() const
+    void Invalidate(const RECT& rect) const
     {
-        ::InvalidateRect(handle, nullptr, FALSE);
+        ::InvalidateRect(handle, &rect, FALSE);
     }
+
+    //void Invalidate() const
+    //{
+    //    ::InvalidateRect(handle, nullptr, FALSE);
+    //}
     
     RECT GetClientRect() const
     {
@@ -344,6 +358,22 @@ public:
         ::GetClientRect(handle, &clientRect);
         return clientRect;
     }
+
+    //void Redraw(const RECT& rect) const
+    //{
+    //    ::RedrawWindow(handle, &rect, nullptr, RDW_NOERASE | RDW_NOFRAME | RDW_NOCHILDREN);
+    //}
+
+    //void PostMessage(UINT message, WPARAM wParam = 0, LPARAM lParam = 0) const
+    //{
+    //    ::PostMessage(handle, message, wParam, lParam);
+    //}
+
+    //void RegisterUserMessage(UINT userMessage)
+    //{
+    //    if (!ExistsUserMessage(userMessage))
+    //        userMessages.push_back(userMessage);
+    //}
 
 protected:
     virtual void OnCreate()
@@ -362,6 +392,13 @@ protected:
     virtual void OnTimer(int timerId)
     {
         UNREFERENCED_PARAMETER(timerId);
+    }
+
+    virtual void OnUserMessage(UINT message, WPARAM wParam, LPARAM lParam)
+    {
+        UNREFERENCED_PARAMETER(message);
+        UNREFERENCED_PARAMETER(wParam);
+        UNREFERENCED_PARAMETER(lParam);
     }
 
 private:
@@ -407,6 +444,12 @@ private:
                 break;
             default:
                 return ::DefWindowProc(windowHandle, message, wParam, lParam);
+            //default: {
+            //    auto self = GetSelf(windowHandle);
+            //    if (self == nullptr || !self->OnUserMessage(message))
+            //        return ::DefWindowProc(windowHandle, message, wParam, lParam);
+            //}
+            //break;
         }
         return 0;
     }
@@ -427,20 +470,36 @@ private:
         wcex.lpszClassName = windowClassName;
         return ::RegisterClassEx(&wcex) != 0;
     }
+
+    //bool OnUserMessage(UINT userMessage)
+    //{
+    //    if (ExistsUserMessage(userMessage)) {
+    //        OnUserMessage(userMessage, 0, 0);
+    //        return true;
+    //    }
+    //    return false;
+    //}
+
+    //bool ExistsUserMessage(UINT userMessage)
+    //{
+    //    return find(userMessages.begin(), userMessages.end(), userMessage) != userMessages.end();
+    //}
 };
 
 class MainWindow : public Window
 {
-    static constexpr int timerTimeoutMilliseconds = 100;
+    static constexpr int timerTimeoutMilliseconds = 200;
 
     static const TCHAR  title          [];
     static const TCHAR  windowClassName[];
 
-    Game game;
+    Game  game;
     POINT paintPosition;
 
+    //static const UINT WM_GAME_NEXT = WM_USER + 101;
+
 public:
-    MainWindow() : game({ 400, 400 }), paintPosition()
+    MainWindow() : game({ 640, 640 }), paintPosition()
     {}
 
     bool Create(HINSTANCE instanceHandle, int showCommand)
@@ -449,12 +508,14 @@ public:
     }
 
 protected:
-    virtual void OnCreate()
+    virtual void OnCreate() override
     {
         SetTimer(timerTimeoutMilliseconds);
+        //RegisterUserMessage(WM_GAME_NEXT);
+        //PostMessage(WM_GAME_NEXT);
     }
 
-    virtual void OnSize(SIZE size)
+    virtual void OnSize(SIZE size) override
     {
         UNREFERENCED_PARAMETER(size);
 
@@ -466,16 +527,27 @@ protected:
         game.Paint(deviceContextHandle, paintPosition);
     }
 
-    virtual void OnTimer(int timerId)
+    virtual void OnTimer(int timerId) override
     {
         UNREFERENCED_PARAMETER(timerId);
 
-        game.Next();
-        Invalidate();
+        Next();
     }
 
+    //virtual void OnUserMessage(UINT message, WPARAM wParam, LPARAM lParam) override
+    //{
+    //    UNREFERENCED_PARAMETER(wParam);
+    //    UNREFERENCED_PARAMETER(lParam);
+    //                  
+    //    switch (message) {
+    //        case WM_GAME_NEXT:
+    //            Next();
+    //            break;
+    //    }
+    //}
+
 private:
-    POINT PaintPosition()
+    POINT PaintPosition() const
     {
         const auto clientCenter = Center(GetClientRect());
         const auto boardSize    = game.GetBoard().GetSize();
@@ -485,6 +557,27 @@ private:
     static POINT Center(const RECT& rect)
     {
         return { (rect.right - rect.left) / 2, (rect.bottom - rect.top) / 2 };
+    }
+
+    void Next()
+    {
+        thread thread([&]() {
+            game.Next();
+        });
+        thread.join();
+        //Redraw();
+        Invalidate(DrawRect());
+        //PostMessage(WM_GAME_NEXT);
+    }
+
+    //void Redraw() const
+    //{
+    //    Window::Redraw(DrawRect());
+    //}
+
+    RECT DrawRect() const
+    {
+        return RECT { paintPosition.x, paintPosition.y, paintPosition.x + game.GetBoard().GetSize().cx, paintPosition.y + game.GetBoard().GetSize().cy };
     }
 };
 
