@@ -5,7 +5,6 @@
 namespace Shos::LifeGame::Test {
     using namespace Shos::LifeGame;
 
-
     class Program
     {
     public:
@@ -17,13 +16,11 @@ namespace Shos::LifeGame::Test {
             Shos::LifeGame::Game game({ size, size });
 
             Shos::stopwatch stopwatch;
-
             for (auto count = 0; count < times; count++)
                 game.Next();
         }
     };
 }
-
 
 int main()
 {

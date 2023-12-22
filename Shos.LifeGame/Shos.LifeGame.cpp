@@ -91,7 +91,7 @@ private:
     {
         thread thread([&]() {
             game.Next();
-            });
+        });
         thread.join();
         //Redraw();
         Invalidate(DrawRect());
