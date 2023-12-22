@@ -259,9 +259,9 @@ public:
         mainBoard->CopyTo(*subBoard);
 #ifdef FAST
         const auto size = mainBoard->GetSize();
-        for (auto y = 0; y < size.cy; y++) {
-            for (auto x = 0; x < size.cx; x++) {
-                const auto point              = Point(x, y);
+        Point point;
+        for (point.y = 0; point.y < size.cy; point.y++) {
+            for (point.x = 0; point.x < size.cx; point.x++) {
                 const auto aliveNeighborCount = mainBoard->GetAliveNeighborCount(point);
                 const auto alive              = mainBoard->Get(point);
                 subBoard->Set(point, aliveNeighborCount == 3 || (aliveNeighborCount == 2 && alive));
@@ -282,9 +282,10 @@ private:
     {
 #ifdef FAST
         const auto size = mainBoard->GetSize();
-        for (auto y = 0; y < size.cy; y++) {
-            for (auto x = 0; x < size.cx; x++)
-                mainBoard->Set(Point(x, y), random.Next() % 2 == 0);
+        Point point;
+        for (point.y = 0; point.y < size.cy; point.y++) {
+            for (point.x = 0; point.x < size.cx; point.x++)
+                mainBoard->Set(point, random.Next() % 2 == 0);
         }
 #else // FAST
         mainBoard->ForEach([&](const Point& point) {
