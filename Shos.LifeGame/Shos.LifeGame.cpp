@@ -136,10 +136,10 @@ private:
 
 } // namespace Shos::LifeGame::Application
 
-int APIENTRY wWinMain(_In_     HINSTANCE instanceHandle        ,
-                      _In_opt_ HINSTANCE previousInstanceHandle,
-                      _In_     LPWSTR    commandLine           ,
-                      _In_     int       showCommand           )
+int APIENTRY _tWinMain(_In_     HINSTANCE instanceHandle        ,
+                       _In_opt_ HINSTANCE previousInstanceHandle,
+                       _In_     LPWSTR    commandLine           ,
+                       _In_     int       showCommand           )
 {
     UNREFERENCED_PARAMETER(previousInstanceHandle);
     UNREFERENCED_PARAMETER(commandLine           );
