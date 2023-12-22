@@ -25,9 +25,7 @@ public:
 
 private:
     static void show_result(double elapsed)
-    {
-        std::cout << "(" << elapsed << "s.)" << std::endl;
-    }
+    { std::cout << "(" << elapsed << "s.)" << std::endl; }
 };
 
 } // namespace Shos

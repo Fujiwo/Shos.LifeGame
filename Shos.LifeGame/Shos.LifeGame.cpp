@@ -15,7 +15,7 @@ using namespace Shos::Win32;
 
 class MainWindow : public Window
 {
-    static constexpr int timerTimeoutMilliseconds = 200;
+    static constexpr int timerTimeoutMilliseconds = 100;
 
     static const TCHAR  title[];
     static const TCHAR  windowClassName[];
@@ -30,9 +30,7 @@ public:
     {}
 
     bool Create(HINSTANCE instanceHandle, int showCommand)
-    {
-        return Window::Create(instanceHandle, windowClassName, title, showCommand);
-    }
+    { return Window::Create(instanceHandle, windowClassName, title, showCommand); }
 
 protected:
     virtual void OnCreate() override
@@ -50,10 +48,7 @@ protected:
     }
 
     virtual void OnPaint(HDC deviceContextHandle) override
-    {
-        //game.Paint(deviceContextHandle, paintPosition);
-        BoardPainter::Paint(deviceContextHandle, paintPosition, game.GetBoard());
-    }
+    { BoardPainter::Paint(deviceContextHandle, paintPosition, game.GetBoard()); }
 
     virtual void OnTimer(int timerId) override
     {
@@ -83,9 +78,7 @@ private:
     }
 
     static POINT Center(const RECT& rect)
-    {
-        return { (rect.right - rect.left) / 2, (rect.bottom - rect.top) / 2 };
-    }
+    { return { (rect.right - rect.left) / 2, (rect.bottom - rect.top) / 2 }; }
 
     void Next()
     {
@@ -94,19 +87,15 @@ private:
         });
         thread.join();
         //Redraw();
-        Invalidate(DrawRect());
+        Invalidate(RenderingArea());
         //PostMessage(WM_GAME_NEXT);
     }
 
     //void Redraw() const
-    //{
-    //    Window::Redraw(DrawRect());
-    //}
+    //{ Window::Redraw(RenderingArea()); }
 
-    RECT DrawRect() const
-    {
-        return RECT{ paintPosition.x, paintPosition.y, paintPosition.x + game.GetBoard().GetSize().cx, paintPosition.y + game.GetBoard().GetSize().cy };
-    }
+    RECT RenderingArea() const
+    { return RECT{ paintPosition.x, paintPosition.y, paintPosition.x + game.GetBoard().GetSize().cx, paintPosition.y + game.GetBoard().GetSize().cy }; }
 };
 
 const TCHAR MainWindow::title[]           = _T("Shos.LifeGame");

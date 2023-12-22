@@ -30,9 +30,7 @@ public:
     {}
 
     Integer Next()
-    {
-        return engine();
-    }
+    { return engine(); }
 };
 
 struct Size
@@ -47,9 +45,7 @@ struct Size
     {}
 
     bool operator ==(const Size& size) const
-    {
-        return cx == size.cx && cy == size.cy;
-    }
+    { return cx == size.cx && cy == size.cy; }
 };
 
 struct Point
@@ -63,22 +59,11 @@ struct Point
     Point(Integer x, Integer y) : x(x), y(y)
     {}
 
-#ifndef FAST
     bool operator ==(const Point& point) const
-    {
-        return x == point.x && y == point.y;
-    }
-
-    bool operator !=(const Point& point) const
-    {
-        return !(*this == point);
-    }
-#endif // FAST
+    { return x == point.x && y == point.y; }
 
     Point operator +(const Size& size) const
-    {
-        return { x + size.cx, y + size.cy };
-    }   
+    { return { x + size.cx, y + size.cy }; }
 };
 
 struct Rect
@@ -87,9 +72,7 @@ struct Rect
     Size  size;
 
     Point RightBottom() const
-    {
-        return leftTop + size;
-    }
+    { return leftTop + size; }
 
     bool IsIn(const Point& point) const
     {
@@ -100,9 +83,7 @@ struct Rect
 private:
     template <typename T>
     bool IsIn(T value, T minimum, T size) const
-    {
-        return minimum <= value && value < minimum + size;
-    }
+    { return minimum <= value && value < minimum + size; }
 };
 
 #ifndef FAST
@@ -139,24 +120,16 @@ class Board
 
 public:
     Size GetSize() const
-    {
-        return size;
-    }
+    { return size; }
 
     UnitInteger* GetCells() const
-    {
-        return cells;
-    }
+    { return cells; }
 
     Board(const Size& size) : size(size)
-    {
-        Initialize();
-    }
+    { Initialize(); }
 
     virtual ~Board()
-    {
-        delete[] cells;
-    }
+    { delete[] cells; }
 
     void CopyTo(Board& board) const
     {
@@ -166,20 +139,18 @@ public:
 
 #ifndef FAST
     void ForEach(function<void(const Point&)> action)
-    {
-        Utility::ForEach(GetRect(), action);
-    }
+    { Utility::ForEach(GetRect(), action); }
 #endif // FAST
 
     UnsignedInteger GetAliveNeighborCount(const Point& point) const
     {
 #ifdef FAST
         UnsignedInteger count = 0;
-        for (auto y = point.y - 1; y <= point.y + 1; y++) {
-            for (auto x = point.x - 1; x <= point.x + 1; x++) {
-                if (x == point.x && y == point.y)
+        for (Point neighborPoint = { point.x - 1, point.y - 1 }; neighborPoint.y <= point.y + 1; neighborPoint.y++) {
+            for (neighborPoint.x = point.x - 1; neighborPoint.x <= point.x + 1; neighborPoint.x++) {
+                if (neighborPoint == point)
                     continue;
-                if (Get(Point(x, y)))
+                if (Get(neighborPoint))
                     count++;
             }
         }
@@ -232,9 +203,7 @@ private:
     }
 
     UnsignedInteger GetUnitNumber() const
-    {
-        return unitNumberX * size.cy;
-    }
+    { return unitNumberX * size.cy; }
 
     bool ToIndex(const Point& point, tuple<UnsignedInteger, Byte>& bitIndex) const
     {
@@ -249,9 +218,7 @@ private:
     }
 
     Rect GetRect() const
-    {
-        return Rect(Point(), size);
-    }
+    { return Rect(Point(), size); }
 };
 
 class Game

@@ -32,19 +32,13 @@ public:
     }
 
     void SetTimer(int timerId = 1, UINT timeoutMilliseconds = 1000)
-    {
-        ::SetTimer(handle, timerId, timeoutMilliseconds, nullptr);
-    }
+    { ::SetTimer(handle, timerId, timeoutMilliseconds, nullptr); }
 
     void Invalidate(const RECT& rect) const
-    {
-        ::InvalidateRect(handle, &rect, FALSE);
-    }
+    { ::InvalidateRect(handle, &rect, FALSE); }
 
     //void Invalidate() const
-    //{
-    //    ::InvalidateRect(handle, nullptr, FALSE);
-    //}
+    //{ ::InvalidateRect(handle, nullptr, FALSE); }
     
     RECT GetClientRect() const
     {
@@ -54,14 +48,10 @@ public:
     }
 
     //void Redraw(const RECT& rect) const
-    //{
-    //    ::RedrawWindow(handle, &rect, nullptr, RDW_NOERASE | RDW_NOFRAME | RDW_NOCHILDREN);
-    //}
+    //{ ::RedrawWindow(handle, &rect, nullptr, RDW_NOERASE | RDW_NOFRAME | RDW_NOCHILDREN); }
 
     //void PostMessage(UINT message, WPARAM wParam = 0, LPARAM lParam = 0) const
-    //{
-    //    ::PostMessage(handle, message, wParam, lParam);
-    //}
+    //{ ::PostMessage(handle, message, wParam, lParam); }
 
     //void RegisterUserMessage(UINT userMessage)
     //{
@@ -97,22 +87,18 @@ protected:
 
 private:
     static void SetSelf(HWND windowHandle, Window* self)
-    {
-        ::SetWindowLongPtr(windowHandle, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(self));
-    }
+    { ::SetWindowLongPtr(windowHandle, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(self)); }
 
     static Window* GetSelf(HWND windowHandle)
-    {
-        return reinterpret_cast<Window*>(::GetWindowLongPtr(windowHandle, GWLP_USERDATA));
-    }
+    { return reinterpret_cast<Window*>(::GetWindowLongPtr(windowHandle, GWLP_USERDATA)); }
 
     static LRESULT CALLBACK windowProcedure(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam)
     {
         switch (message) {
             case WM_CREATE: {
                 auto createStruct = reinterpret_cast<CREATESTRUCT*>(lParam);
-                auto self = reinterpret_cast<Window*>(createStruct->lpCreateParams);
-                self->handle = windowHandle;
+                auto self         = reinterpret_cast<Window*>(createStruct->lpCreateParams);
+                self->handle      = windowHandle;
                 SetSelf(windowHandle, self);
                 self->OnCreate();
             }
@@ -129,10 +115,9 @@ private:
                 GetSelf(windowHandle)->OnSize(size);
             }
             break;
-            case WM_TIMER: {
+            case WM_TIMER:
                 GetSelf(windowHandle)->OnTimer(int(wParam));
-            }
-            break;
+                break;
             case WM_DESTROY:
                 ::PostQuitMessage(0);
                 break;
@@ -175,8 +160,6 @@ private:
     //}
 
     //bool ExistsUserMessage(UINT userMessage)
-    //{
-    //    return find(userMessages.begin(), userMessages.end(), userMessage) != userMessages.end();
-    //}
+    //{ return find(userMessages.begin(), userMessages.end(), userMessage) != userMessages.end(); }
 };
 } // namespace Shos::Win32
