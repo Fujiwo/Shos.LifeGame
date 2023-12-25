@@ -6,9 +6,9 @@
 using namespace std;
 
 // Result:
-//       (27.637s.)
-// FAST: (11.860s.)
-// MT  : ( 5.990s.)
+//       (23.363s.)
+// FAST: ( 9.109s.)
+// MT  : ( 3.270s.)
 
 namespace Shos::LifeGame::Test {
     using namespace Shos::LifeGame;

@@ -287,8 +287,6 @@ public:
 
     void Next()
     {
-        mainBoard->CopyTo(*subBoard);
-
 #if defined(MT)
         const auto size = mainBoard->GetSize();
 
@@ -332,8 +330,7 @@ private:
         for (point.y = minimum.y; point.y < maximum.y; point.y++) {
             for (point.x = minimum.x; point.x < maximum.x; point.x++) {
                 const auto aliveNeighborCount = mainBoard->GetAliveNeighborCount(point);
-                const auto alive = mainBoard->Get(point);
-                subBoard->Set(point, aliveNeighborCount == 3 || (aliveNeighborCount == 2 && alive));
+                subBoard->Set(point, aliveNeighborCount == 3 || (aliveNeighborCount == 2 && mainBoard->Get(point)));
             }
         }
     }
