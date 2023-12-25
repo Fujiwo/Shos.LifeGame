@@ -15,7 +15,7 @@ using namespace Shos::Win32;
 
 class MainWindow : public Window
 {
-    static constexpr int timerTimeoutMilliseconds = 100;
+    static constexpr int timerTimeoutMilliseconds = 10;
 
     static const TCHAR  title[];
     static const TCHAR  windowClassName[];
@@ -82,10 +82,12 @@ private:
 
     void Next()
     {
-        thread thread([&]() {
-            game.Next();
-        });
-        thread.join();
+        //thread thread([&]() {
+        //    game.Next();
+        //});
+        //thread.join();
+        game.Next();
+
         //Redraw();
         Invalidate(RenderingArea());
         //PostMessage(WM_GAME_NEXT);

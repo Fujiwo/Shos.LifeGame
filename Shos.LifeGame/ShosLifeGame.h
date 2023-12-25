@@ -1,12 +1,15 @@
 #pragma once
 
 #define FAST
+#define MT
 
-#ifndef FAST
+#if !defined(FAST) || defined(MT)
 #include <functional>
 #endif // FAST
 #include <tuple>
+#if defined(MT)
 #include <thread>
+#endif // MT
 #include <random>
 #include <cstdlib>
 #include <cstring>
@@ -86,7 +89,7 @@ private:
     { return minimum <= value && value < minimum + size; }
 };
 
-#ifndef FAST
+#if !defined(FAST)
 class Utility
 {
 public:
@@ -111,6 +114,39 @@ public:
     }
 };
 #endif // FAST
+
+#if defined(MT)
+class ThreadUtility
+{
+public:
+    static void ForEach(Integer minimum, Integer maximum, function<void(Integer, Integer)> action)
+    {
+        const auto     hardwareConcurrency = GetHardwareConcurrency();
+        const Integer  size = maximum - minimum;
+        vector<thread> threads;
+
+        for (auto threadIndex = 0U; threadIndex < hardwareConcurrency; threadIndex++) {
+            const auto index = threadIndex;
+            const auto begin = minimum + size * index / hardwareConcurrency;
+            const auto end   = minimum + (index == hardwareConcurrency - 1 ? size
+                                                                           : size * (index + 1) / hardwareConcurrency);
+            threads.emplace_back([=]() { action(begin, end); });
+        }
+
+        for (auto& thread : threads)
+            thread.join();
+    }
+
+private:
+    static unsigned int GetHardwareConcurrency()
+    {
+        auto hardwareConcurrency = thread::hardware_concurrency();
+        if (hardwareConcurrency == 0U)
+            hardwareConcurrency = 1U;
+        return hardwareConcurrency;
+    }
+};
+#endif // MT
 
 class Board
 {
@@ -137,14 +173,14 @@ public:
         ::memcpy(board.cells, cells, GetUnitNumber() * (sizeof(UnitInteger) / sizeof(Byte)));
     }
 
-#ifndef FAST
+#if !defined(FAST)
     void ForEach(function<void(const Point&)> action)
     { Utility::ForEach(GetRect(), action); }
 #endif // FAST
 
     UnsignedInteger GetAliveNeighborCount(const Point& point) const
     {
-#ifdef FAST
+#if defined(FAST)
         UnsignedInteger count = 0;
         for (Point neighborPoint = { point.x - 1, point.y - 1 }; neighborPoint.y <= point.y + 1; neighborPoint.y++) {
             for (neighborPoint.x = point.x - 1; neighborPoint.x <= point.x + 1; neighborPoint.x++) {
@@ -249,38 +285,33 @@ public:
         delete mainBoard;
     }
 
-    //void Paint(HDC deviceContextHandle, const POINT& position)
-    //{
-    //    BoardPainter::Paint(deviceContextHandle, position, *mainBoard);
-    //}
-
     void Next()
     {
         mainBoard->CopyTo(*subBoard);
-#ifdef FAST
+
+#if defined(MT)
         const auto size = mainBoard->GetSize();
-        Point point;
-        for (point.y = 0; point.y < size.cy; point.y++) {
-            for (point.x = 0; point.x < size.cx; point.x++) {
-                const auto aliveNeighborCount = mainBoard->GetAliveNeighborCount(point);
-                const auto alive              = mainBoard->Get(point);
-                subBoard->Set(point, aliveNeighborCount == 3 || (aliveNeighborCount == 2 && alive));
-            }
-        }
+
+        ThreadUtility::ForEach(0, size.cy, [=](Integer minimum, Integer maximum) {
+            NextPart(Point(0, minimum), Point(size.cx, maximum));
+        });
+#elif defined(FAST)
+        NextPart(Point(), Point() + mainBoard->GetSize());
 #else // FAST
         mainBoard->ForEach([&](const Point& point) {
             const auto aliveNeighborCount = mainBoard->GetAliveNeighborCount(point);
-            const auto alive = mainBoard->Get(point);
+            const auto alive              = mainBoard->Get(point);
             subBoard->Set(point, aliveNeighborCount == 3 || (aliveNeighborCount == 2 && alive));
-            });
+        });
 #endif // FAST
+
         swap(mainBoard, subBoard);
     }
 
 private:
     void Initialize()
     {
-#ifdef FAST
+#if defined(FAST)
         const auto size = mainBoard->GetSize();
         Point point;
         for (point.y = 0; point.y < size.cy; point.y++) {
@@ -293,6 +324,20 @@ private:
         });
 #endif // FAST
     }
+
+#if defined(FAST) || defined(MT)
+    void NextPart(const Point& minimum, const Point& maximum)
+    {
+        Point point;
+        for (point.y = minimum.y; point.y < maximum.y; point.y++) {
+            for (point.x = minimum.x; point.x < maximum.x; point.x++) {
+                const auto aliveNeighborCount = mainBoard->GetAliveNeighborCount(point);
+                const auto alive = mainBoard->Get(point);
+                subBoard->Set(point, aliveNeighborCount == 3 || (aliveNeighborCount == 2 && alive));
+            }
+        }
+    }
+#endif // FAST
 };
 
 } // namespace Shos::LifeGame

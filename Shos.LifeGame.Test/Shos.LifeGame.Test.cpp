@@ -1,6 +1,14 @@
 ﻿#include "../Shos.LifeGame/ShosLifeGame.h"
 
 #include "ShosStopwatch.h"
+#include <thread>
+#include <vector>
+using namespace std;
+
+// Result:
+//       (27.637s.)
+// FAST: (11.860s.)
+// MT  : ( 5.990s.)
 
 namespace Shos::LifeGame::Test {
     using namespace Shos::LifeGame;
@@ -23,6 +31,4 @@ namespace Shos::LifeGame::Test {
 }
 
 int main()
-{
-    Shos::LifeGame::Test::Program().Run();
-}
+{ Shos::LifeGame::Test::Program().Run(); }
