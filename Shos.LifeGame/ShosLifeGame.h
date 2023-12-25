@@ -122,7 +122,7 @@ public:
     static void ForEach(Integer minimum, Integer maximum, function<void(Integer, Integer)> action)
     {
         const auto     hardwareConcurrency = GetHardwareConcurrency();
-        const Integer  size = maximum - minimum;
+        const Integer  size                = maximum - minimum;
         vector<thread> threads;
 
         for (auto threadIndex = 0U; threadIndex < hardwareConcurrency; threadIndex++) {

@@ -22,11 +22,12 @@ class MainWindow : public Window
 
     Game  game;
     POINT paintPosition;
+    RECT  renderingArea;
 
     //static const UINT WM_GAME_NEXT = WM_USER + 101;
 
 public:
-    MainWindow() : game({ 640, 640 }), paintPosition()
+    MainWindow() : game({ 800, 800 })
     {}
 
     bool Create(HINSTANCE instanceHandle, int showCommand)
@@ -45,6 +46,7 @@ protected:
         UNREFERENCED_PARAMETER(size);
 
         paintPosition = PaintPosition();
+        renderingArea = RenderingArea();
     }
 
     virtual void OnPaint(HDC deviceContextHandle) override
@@ -73,9 +75,12 @@ private:
     POINT PaintPosition() const
     {
         const auto clientCenter = Center(GetClientRect());
-        const auto boardSize = game.GetBoard().GetSize();
+        const auto boardSize    = game.GetBoard().GetSize();
         return { clientCenter.x - boardSize.cx / 2, clientCenter.y - boardSize.cy / 2 };
     }
+
+    RECT RenderingArea() const
+    { return RECT{ paintPosition.x, paintPosition.y, paintPosition.x + game.GetBoard().GetSize().cx, paintPosition.y + game.GetBoard().GetSize().cy }; }
 
     static POINT Center(const RECT& rect)
     { return { (rect.right - rect.left) / 2, (rect.bottom - rect.top) / 2 }; }
@@ -89,15 +94,12 @@ private:
         game.Next();
 
         //Redraw();
-        Invalidate(RenderingArea());
+        Invalidate(renderingArea);
         //PostMessage(WM_GAME_NEXT);
     }
 
     //void Redraw() const
-    //{ Window::Redraw(RenderingArea()); }
-
-    RECT RenderingArea() const
-    { return RECT{ paintPosition.x, paintPosition.y, paintPosition.x + game.GetBoard().GetSize().cx, paintPosition.y + game.GetBoard().GetSize().cy }; }
+    //{ Window::Redraw(renderingArea); }
 };
 
 const TCHAR MainWindow::title[]           = _T("Shos.LifeGame");
