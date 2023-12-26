@@ -1,5 +1,6 @@
 ﻿#include <tchar.h>
 #include <sstream>
+#include <iomanip>
 using namespace std;
 
 #include "ShosLifeGameBoardPainter.h"
@@ -116,10 +117,11 @@ private:
         stream << _T("Sho's Life Game: generation(")
                << generation
                << _T("), epasped time(")
-               << std::setprecision(3)
+               << std::fixed
+               << std::setprecision(1)
                << elapsed
                << _T("), FPS(")
-               << std::setprecision(3)
+               << std::setprecision(0)
                << generation / elapsed
                << _T(")");
         return stream.str().c_str();
