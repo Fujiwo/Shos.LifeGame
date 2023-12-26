@@ -161,6 +161,7 @@ public:
     UnitInteger* GetCells() const
     { return cells; }
 
+    /// <remarks>size.cx must be a multiple of 8.</remarks>
     Board(const Size& size) : size(size)
     { Initialize(); }
 
@@ -234,8 +235,10 @@ private:
     void InitializeUnitNumberX()
     {
         unitNumberX = size.cx / sizeof(UnitInteger);
-        if (size.cx % sizeof(UnitInteger) != 0)
+        if (size.cx % sizeof(UnitInteger) != 0) {
+            assert(false);
             unitNumberX++;
+        }
     }
 
     UnsignedInteger GetUnitNumber() const
