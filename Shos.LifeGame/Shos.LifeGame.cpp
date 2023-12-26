@@ -82,6 +82,16 @@ protected:
     }
 #endif // TIMER
 
+    virtual void OnKeyDown(int key)
+    {
+        UNREFERENCED_PARAMETER(key);
+        const auto number = key - '0';
+        if (0 <= number && number < int(Pattern::Type::PatternCount))
+            game.Set(static_cast<Pattern::Type>(number));
+        else if (key == VK_ESCAPE)
+            Reset();
+    }
+
     virtual void OnRightButtonUp(const POINT& point) override
     {
         UNREFERENCED_PARAMETER(point);

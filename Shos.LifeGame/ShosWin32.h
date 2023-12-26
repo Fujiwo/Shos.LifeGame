@@ -105,6 +105,11 @@ protected:
     }
 #endif // TIMER
 
+    virtual void OnKeyDown(int key)
+    {
+        UNREFERENCED_PARAMETER(key);
+    }
+
     virtual void OnRightButtonUp(const POINT& point)
     {
         UNREFERENCED_PARAMETER(point);
@@ -152,6 +157,11 @@ private:
                 GetSelf(windowHandle)->OnTimer(int(wParam));
                 break;
 #endif // TIMER
+            case WM_KEYDOWN: {
+                    const auto key = int(wParam);
+                    GetSelf(windowHandle)->OnKeyDown(key);
+                }
+                break;
             case WM_RBUTTONUP: {
                     const POINT point = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
                     GetSelf(windowHandle)->OnRightButtonUp(point);

@@ -3,6 +3,7 @@
 #define FAST
 #define MT
 
+#include <string>
 #if !defined(FAST) || defined(MT)
 #include <functional>
 #endif // FAST
@@ -147,6 +148,120 @@ private:
 };
 #endif // MT
 
+class Pattern final
+{
+public:
+    enum class Type
+    {
+        Glider               ,
+        LightweightSpaceship ,
+        MiddleweightSpaceship,
+        HeavyweightSpaceship ,
+        Rpentomino           ,
+        Diehard              ,
+        Acorn                ,
+        GosperGliderGun      ,
+        PatternCount
+    };
+
+private:
+    const char      alive = '*';
+    std::string     pattern;
+    UnsignedInteger width;
+
+public:
+    static Pattern Create(Type type)
+    {
+        switch (type) {
+        case Type::Glider:
+            return Pattern(
+                " * "
+                "  *"
+                "***"
+            , 3U);
+        case Type::LightweightSpaceship:
+            return Pattern(
+                " **  *"
+                "*    *"
+                "*    *"
+                "*   **"
+            , 6U);
+        case Type::MiddleweightSpaceship:
+            return Pattern(
+                " **   *"
+                "*     *"
+                "*     *"
+                "*     *"
+                "*    **"
+            , 7U);
+        case Type::HeavyweightSpaceship:
+            return Pattern(
+                " **    *"
+                "*      *"
+                "*      *"
+                "*      *"
+                "*      *"
+                "*     **"
+            , 8U);
+        case Type::Rpentomino:
+            return Pattern(
+                " **"
+                "** "
+                " * "
+            , 3U);
+        case Type::Diehard:
+            return Pattern(
+                "      *"
+                "*      "
+                " **    "
+                "**  ***"
+            , 7U);
+        case Type::Acorn:
+            return Pattern(
+                " *    "
+                "   *  "
+                "**** *"
+            , 6U);
+        case Type::GosperGliderGun:
+            return Pattern(
+                "                        *           "
+                "                      * *           "
+                "            **      **            **"
+                "           *   *    **            **"
+                "**        *     *   **              "
+                "**        *   * **    * *           "
+                "          *     *       *           "
+                "           *   *                    "
+                "            **                      "
+            , 36U);
+        default:
+            assert(false);
+            return Pattern("", 0U);
+        }   
+    }
+
+    Size GetSize() const
+    {
+        auto size = Size{ Integer(width), Integer(pattern.length() / width) };
+        if (pattern.length() % width != 0)
+            size.cy++;
+        return size;
+    }
+
+    Pattern(const std::string& pattern, UnsignedInteger width) : pattern(pattern), width(width)
+    {}
+
+    bool operator[](size_t index) const
+    { return pattern[index] == alive; }
+
+//    bool operator[](const Point& point) const
+//    { return operator[](ToIndex(point)); }
+//
+//private:
+//    size_t ToIndex(const Point& point) const
+//    { return width * point.y + point.x; }
+};
+
 class Board final
 {
     const Size      size;
@@ -163,6 +278,30 @@ public:
     /// <remarks>size.cx must be a multiple of 8.</remarks>
     Board(const Size& size) : size(size)
     { Initialize(); }
+
+    /// <remarks>size.cx must be a multiple of 8.</remarks>
+    bool Set(const Pattern& pattern)
+    {
+        const auto patternSize = pattern.GetSize();
+        if (patternSize.cx > size.cx || patternSize.cy > size.cy)
+            return false;
+
+        Clear();
+
+        const auto startPoint   = Point { (size.cx - patternSize.cx) / 2, (size.cy - patternSize.cy) / 2 };
+        size_t     patternIndex = 0U;
+
+#if defined(FAST)
+        for (Point point = startPoint; point.y < startPoint.y + patternSize.cy; point.y++) {
+            for (point.x = startPoint.x; point.x < startPoint.x + patternSize.cx; point.x++)
+                Set(point, pattern[patternIndex++]);
+    }
+#else // FAST
+        Utility::ForEach(Rect{ startPoint, patternSize }, [](const Point& point) { Set(point, pattern[patternIndex++]); });
+#endif // FAST
+
+        return true;
+    }
 
     ~Board()
     { delete[] cells; }
@@ -228,8 +367,12 @@ private:
         InitializeUnitNumberX();
         const auto unitNumber = GetUnitNumber();
         cells                 = new UnitInteger[unitNumber];
-        ::memset(cells, 0, unitNumber * (sizeof(UnitInteger) / sizeof(Byte)));
+        Clear();
+        //::memset(cells, 0, unitNumber * (sizeof(UnitInteger) / sizeof(Byte)));
     }
+
+    void Clear() const
+    { ::memset(cells, 0, GetUnitNumber() * (sizeof(UnitInteger) / sizeof(Byte))); }
 
     void InitializeUnitNumberX()
     {
@@ -312,6 +455,9 @@ public:
         Initialize();
         generation = 0UL;
     }
+
+    void Set(Pattern::Type patternType)
+    { mainBoard->Set(Pattern::Create(patternType)); }
 
 private:
     void Initialize()
