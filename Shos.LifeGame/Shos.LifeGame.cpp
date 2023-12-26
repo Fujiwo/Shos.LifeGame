@@ -90,7 +90,7 @@ private:
     { return RECT{ paintPosition.x, paintPosition.y, paintPosition.x + game.GetBoard().GetSize().cx, paintPosition.y + game.GetBoard().GetSize().cy }; }
 
     static POINT Center(const RECT& rect)
-    { return { (rect.right - rect.left) / 2, (rect.bottom - rect.top) / 2 }; }
+    { return { (rect.left + rect.right) / 2, (rect.top + rect.bottom) / 2 }; }
 
     void Next()
     {
