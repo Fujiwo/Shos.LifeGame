@@ -158,9 +158,11 @@ public:
         MiddleweightSpaceship,
         HeavyweightSpaceship ,
         Rpentomino           ,
-        Diehard              ,
-        Acorn                ,
         GosperGliderGun      ,
+        SimkinGliderGun      ,
+        SwitchEngine         ,
+        PufferTrain          ,
+        Max                  ,
         PatternCount
     };
 
@@ -175,53 +177,45 @@ public:
         switch (type) {
         case Type::Glider:
             return Pattern(
-                " * "
-                "  *"
                 "***"
+                "*  "
+                " * "
             , 3U);
         case Type::LightweightSpaceship:
             return Pattern(
-                " **  *"
-                "*    *"
-                "*    *"
-                "*   **"
-            , 6U);
+                " *  *"
+                "*    "
+                "*   *"
+                "**** "
+            , 5U);
         case Type::MiddleweightSpaceship:
             return Pattern(
-                " **   *"
-                "*     *"
-                "*     *"
-                "*     *"
-                "*    **"
-            , 7U);
+                "   *  "
+                " *   *"
+                "*     "
+                "*    *"
+                "***** "
+            , 6U);
         case Type::HeavyweightSpaceship:
             return Pattern(
-                " **    *"
-                "*      *"
-                "*      *"
-                "*      *"
-                "*      *"
-                "*     **"
-            , 8U);
+                "   **  "
+                " *    *"
+                "*      "
+                "*     *"
+                "****** "
+            , 7U);
         case Type::Rpentomino:
             return Pattern(
                 " **"
                 "** "
                 " * "
             , 3U);
-        case Type::Diehard:
-            return Pattern(
-                "      *"
-                "*      "
-                " **    "
-                "**  ***"
-            , 7U);
         case Type::Acorn:
             return Pattern(
-                " *    "
-                "   *  "
-                "**** *"
-            , 6U);
+                " *     "
+                "   *   "
+                "**  ***"
+            , 7U);
         case Type::GosperGliderGun:
             return Pattern(
                 "                        *           "
@@ -234,6 +228,152 @@ public:
                 "           *   *                    "
                 "            **                      "
             , 36U);
+        case Type::SimkinGliderGun:
+            return Pattern(
+                "**     **                        "
+                "**     **                        "
+                "                                 "
+                "    **                           "
+                "    **                           "
+                "                                 "
+                "                                 "
+                "                                 "
+                "                                 "
+                "                      ** **      "
+                "                     *     *     "
+                "                     *      *  **"
+                "                     ***   *   **"
+                "                          *      "
+                "                                 "
+                "                                 "
+                "                                 "
+                "                    **           "
+                "                    *            "
+                "                     ***         "
+                "                       *         "
+                , 33U);
+        case Type::SwitchEngine:
+            return Pattern(
+                "***                                            "
+                "* *                                            "
+                "***                                            "
+                "* *                                            "
+                "***                                            "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "***                  *                  **     "
+                " *  *                *  *                 *    "
+                "     *              * * *                 *    "
+                "  * *                                      ****"
+                "                        **                     "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "***                                            "
+                "* *                                            "
+                "***                                            "
+                "  *                                            "
+                "  *                                            "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "                                               "
+                "**                  *                     *    "
+                "                    **                  *      "
+                " *                                       *     "
+                "  ** * *             ***                 *     "
+                "                        *                      "
+                "    * *               **                * ***  "
+                "                                               "
+                "                                           *   "
+            , 47U);
+        case Type::PufferTrain:
+            return Pattern(
+                "   * "
+                "    *"
+                "*   *"
+                " ****"
+                "     "
+                "     "
+                "     "
+                "*    "
+                " **  "
+                "  *  "
+                "  *  "
+                " *   "
+                "     "
+                "     "
+                "   * "
+                "    *"
+                "*   *"
+                " ****"
+                , 5U);
+        case Type::Max:
+            return Pattern(
+                "                  *        "
+                "                 ***       "
+                "            ***    **      "
+                "           *  ***  * **    "
+                "          *   * *  * *     "
+                "          *    * * * * **  "
+                "            *    * *   **  "
+                "****     * *    *   * ***  "
+                "*   ** * *** **         ** "
+                "*     **     *             "
+                " *  ** *  *  * **          "
+                "       * * * * * *     ****"
+                " *  ** *  *  *  ** * **   *"
+                "*     **   * * *   **     *"
+                "*   ** * **  *  *  * **  * "
+                "****     * * * * * *       "
+                "          ** *  *  * **  * "
+                "             *     **     *"
+                " **         ** *** * **   *"
+                "  *** *   *    * *     ****"
+                "  **   * *    *            "
+                "  ** * * * *    *          "
+                "     * *  * *   *          "
+                "    ** *  ***  *           "
+                "      **    ***            "
+                "       ***                 "
+                "        *                  "
+                , 27U);
         default:
             assert(false);
             return Pattern("", 0U);
