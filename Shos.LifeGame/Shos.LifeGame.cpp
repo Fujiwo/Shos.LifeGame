@@ -1,11 +1,15 @@
-﻿#include <SDKDDKVer.h>
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <tchar.h>
+﻿#include <tchar.h>
+#include <sstream>
 using namespace std;
 
 #include "ShosLifeGameBoardPainter.h"
 #include "ShosWin32.h"
+
+#if defined(UNICODE) || defined(_UNICODE)
+#define tstringstream wstringstream  
+#else // UNICODE
+#define tstringstream stringstream
+#endif // UNICODE
 
 namespace Shos::LifeGame::Application {
 
@@ -15,31 +19,44 @@ using namespace Shos::Win32;
 
 class MainWindow : public Window
 {
-    static constexpr int timerTimeoutMilliseconds = 10;
-
+#if defined(TIMER)
+    static constexpr int timerTimeoutMilliseconds = 100;
+#endif // TIMER
     static const TCHAR  title[];
     static const TCHAR  windowClassName[];
 
-    Game  game;
-    POINT paintPosition;
-    RECT  renderingArea;
-
-    //static const UINT WM_GAME_NEXT = WM_USER + 101;
+    Game   game;
+    POINT  paintPosition;
+    RECT   renderingArea;
+#if defined(TIMER)
+    Timer* timer;
+#endif // TIMER
 
 public:
-    MainWindow() : game({ 800, 800 })
+    MainWindow() : game({ 800, 800 }), paintPosition({ 0, 0 }), renderingArea({ 0, 0, 0, 0 })
+#if defined(TIMER)
+        , timer(nullptr)
+#endif // TIMER
     {}
+
+#if defined(TIMER)
+    virtual ~MainWindow()
+    { delete timer; }
+#endif // TIMER
 
     bool Create(HINSTANCE instanceHandle, int showCommand)
     { return Window::Create(instanceHandle, windowClassName, title, showCommand); }
 
+#if defined(IDLE)
+    virtual void OnIdle() override
+    { Next(); }
+#endif // IDLE
+
 protected:
+#if defined(TIMER)
     virtual void OnCreate() override
-    {
-        SetTimer(timerTimeoutMilliseconds);
-        //RegisterUserMessage(WM_GAME_NEXT);
-        //PostMessage(WM_GAME_NEXT);
-    }
+    { timer = new Timer(*this, timerTimeoutMilliseconds); }
+#endif // TIMER
 
     virtual void OnSize(SIZE size) override
     {
@@ -52,24 +69,14 @@ protected:
     virtual void OnPaint(HDC deviceContextHandle) override
     { BoardPainter::Paint(deviceContextHandle, paintPosition, game.GetBoard()); }
 
+#if defined(TIMER)
     virtual void OnTimer(int timerId) override
     {
         UNREFERENCED_PARAMETER(timerId);
 
         Next();
     }
-
-    //virtual void OnUserMessage(UINT message, WPARAM wParam, LPARAM lParam) override
-    //{
-    //    UNREFERENCED_PARAMETER(wParam);
-    //    UNREFERENCED_PARAMETER(lParam);
-    //                  
-    //    switch (message) {
-    //        case WM_GAME_NEXT:
-    //            Next();
-    //            break;
-    //    }
-    //}
+#endif // TIMER
 
 private:
     POINT PaintPosition() const
@@ -87,44 +94,29 @@ private:
 
     void Next()
     {
-        //thread thread([&]() {
-        //    game.Next();
-        //});
-        //thread.join();
         game.Next();
-
-        //Redraw();
         Invalidate(renderingArea);
-        //PostMessage(WM_GAME_NEXT);
+        SetTitle();
     }
 
-    //void Redraw() const
-    //{ Window::Redraw(renderingArea); }
+    void SetTitle() const
+    {
+        tstringstream stream;
+        stream << _T("Sho's Life Game: (") << game.GetGeneration() << _T(")");
+        SetText(stream.str().c_str());
+    }
 };
 
 const TCHAR MainWindow::title[]           = _T("Shos.LifeGame");
 const TCHAR MainWindow::windowClassName[] = _T("ShosLifeGameMainWindow");
 
-class Program
+class Program : public Shos::Win32::Program
 {
     MainWindow mainWindow;
 
-public:
-    Program(HINSTANCE instanceHandle, int showCommand)
-    {
-        if (mainWindow.Create(instanceHandle, showCommand))
-            MessageLoop();
-    }
-
-private:
-    void MessageLoop()
-    {
-        MSG message;
-        while (::GetMessage(&message, nullptr, 0, 0)) {
-            ::TranslateMessage(&message);
-            ::DispatchMessage (&message);
-        }
-    }
+protected:
+    virtual Window* CreateMainWindow(HINSTANCE instanceHandle, int showCommand) override
+    { return mainWindow.Create(instanceHandle, showCommand) ? &mainWindow : nullptr; }
 };
 
 } // namespace Shos::LifeGame::Application
@@ -137,6 +129,6 @@ int APIENTRY _tWinMain(_In_     HINSTANCE instanceHandle        ,
     UNREFERENCED_PARAMETER(previousInstanceHandle);
     UNREFERENCED_PARAMETER(commandLine           );
 
-    Shos::LifeGame::Application::Program(instanceHandle, showCommand);
+    Shos::LifeGame::Application::Program().Run(instanceHandle, showCommand);
     return 0;
 }

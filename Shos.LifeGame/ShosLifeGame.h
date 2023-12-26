@@ -259,25 +259,23 @@ private:
 
 class Game
 {
-    Random random;
-    Board* mainBoard;
-    Board* subBoard;
+    Random             random    ;
+    Board*             mainBoard ;
+    Board*             subBoard  ;
+    unsigned long long generation;
 
 public:
     const Board& GetBoard() const
-    {
-        return *mainBoard;
-    }
+    { return *mainBoard; }
 
     Board& GetBoard()
-    {
-        return *mainBoard;
-    }
+    { return *mainBoard; }
 
-    Game(const Size& size) : mainBoard(new Board(size)), subBoard(new Board(size))
-    {
-        Initialize();
-    }
+    unsigned long long GetGeneration() const
+    { return generation; }
+
+    Game(const Size& size) : mainBoard(new Board(size)), subBoard(new Board(size)), generation(0UL)
+    { Initialize(); }
 
     virtual ~Game()
     {
@@ -304,6 +302,7 @@ public:
 #endif // FAST
 
         swap(mainBoard, subBoard);
+        generation++;
     }
 
 private:

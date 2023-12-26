@@ -1,5 +1,9 @@
 #pragma once
 
+//#define USERMESSAGE
+//#define TIMER
+#define IDLE
+
 #include <SDKDDKVer.h>
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -11,9 +15,14 @@ class Window
 {
     HWND handle;
 
-    //vector<UINT> userMessages;
+#if defined(USERMESSAGE)
+    vector<UINT> userMessages;
+#endif // USERMESSAGE
 
 public:
+    HWND GetHandle() const
+    { return this == nullptr ? nullptr : handle; }
+
     Window() : handle(nullptr)
     {}
 
@@ -31,8 +40,13 @@ public:
         return true;
     }
 
-    void SetTimer(int timerId = 1, UINT timeoutMilliseconds = 1000)
-    { ::SetTimer(handle, timerId, timeoutMilliseconds, nullptr); }
+#if defined(TIMER)
+    UINT_PTR SetTimer(UINT_PTR timerId = 1U, UINT timeoutMilliseconds = 1000)
+    { return ::SetTimer(handle, timerId, timeoutMilliseconds, nullptr); }
+
+    UINT_PTR KillTimer(UINT_PTR timerId = 1U, UINT timeoutMilliseconds = 1000)
+    { return ::SetTimer(handle, timerId, timeoutMilliseconds, nullptr); }
+#endif // TIMER
 
     void Invalidate(const RECT& rect) const
     { ::InvalidateRect(handle, &rect, FALSE); }
@@ -47,17 +61,24 @@ public:
         return clientRect;
     }
 
-    //void Redraw(const RECT& rect) const
-    //{ ::RedrawWindow(handle, &rect, nullptr, RDW_NOERASE | RDW_NOFRAME | RDW_NOCHILDREN); }
+    void SetText(LPCTSTR text) const
+    { ::SetWindowText(handle, text); }
 
-    //void PostMessage(UINT message, WPARAM wParam = 0, LPARAM lParam = 0) const
-    //{ ::PostMessage(handle, message, wParam, lParam); }
+#if defined(USERMESSAGE)
+    void PostMessage(UINT message, WPARAM wParam = 0, LPARAM lParam = 0) const
+    { ::PostMessage(handle, message, wParam, lParam); }
 
-    //void RegisterUserMessage(UINT userMessage)
-    //{
-    //    if (!ExistsUserMessage(userMessage))
-    //        userMessages.push_back(userMessage);
-    //}
+    void RegisterUserMessage(UINT userMessage)
+    {
+        if (!ExistsUserMessage(userMessage))
+            userMessages.push_back(userMessage);
+    }
+#endif // USERMESSAGE
+
+#if defined(IDLE)
+    virtual void OnIdle()
+    {}
+#endif // IDLE
 
 protected:
     virtual void OnCreate()
@@ -73,16 +94,18 @@ protected:
         UNREFERENCED_PARAMETER(deviceContextHandle);
     }
 
+#if defined(TIMER)
     virtual void OnTimer(int timerId)
     {
         UNREFERENCED_PARAMETER(timerId);
     }
+#endif // TIMER
 
     virtual void OnUserMessage(UINT message, WPARAM wParam, LPARAM lParam)
     {
         UNREFERENCED_PARAMETER(message);
-        UNREFERENCED_PARAMETER(wParam);
-        UNREFERENCED_PARAMETER(lParam);
+        UNREFERENCED_PARAMETER(wParam );
+        UNREFERENCED_PARAMETER(lParam );
     }
 
 private:
@@ -115,20 +138,25 @@ private:
                 GetSelf(windowHandle)->OnSize(size);
             }
             break;
+#if defined(TIMER)
             case WM_TIMER:
                 GetSelf(windowHandle)->OnTimer(int(wParam));
                 break;
+#endif // TIMER
             case WM_DESTROY:
                 ::PostQuitMessage(0);
                 break;
             default:
+#if defined(USERMESSAGE)
+                {
+                    auto self = GetSelf(windowHandle);
+                    if (self == nullptr || !self->OnUserMessage(message))
+                        return ::DefWindowProc(windowHandle, message, wParam, lParam);
+                }
+                break;
+#else // USERMESSAGE
                 return ::DefWindowProc(windowHandle, message, wParam, lParam);
-            //default: {
-            //    auto self = GetSelf(windowHandle);
-            //    if (self == nullptr || !self->OnUserMessage(message))
-            //        return ::DefWindowProc(windowHandle, message, wParam, lParam);
-            //}
-            //break;
+#endif // USERMESSAGE
         }
         return 0;
     }
@@ -150,16 +178,77 @@ private:
         return ::RegisterClassEx(&wcex) != 0;
     }
 
-    //bool OnUserMessage(UINT userMessage)
-    //{
-    //    if (ExistsUserMessage(userMessage)) {
-    //        OnUserMessage(userMessage, 0, 0);
-    //        return true;
-    //    }
-    //    return false;
-    //}
+#if defined(USERMESSAGE)
+    bool OnUserMessage(UINT userMessage)
+    {
+        if (ExistsUserMessage(userMessage)) {
+            OnUserMessage(userMessage, 0, 0);
+            return true;
+        }
+        return false;
+    }
 
-    //bool ExistsUserMessage(UINT userMessage)
-    //{ return find(userMessages.begin(), userMessages.end(), userMessage) != userMessages.end(); }
+    bool ExistsUserMessage(UINT userMessage)
+    { return find(userMessages.begin(), userMessages.end(), userMessage) != userMessages.end(); }
+#endif // USERMESSAGE
 };
+
+class Timer
+{
+    const UINT_PTR handle;
+
+public:
+    Timer(const Window& window, UINT_PTR timerId = 1U, UINT timeoutMilliseconds = 1000)
+        : handle(::SetTimer(window.GetHandle(), timerId, timeoutMilliseconds, nullptr))
+    {}
+
+    virtual ~Timer()
+    { ::KillTimer(nullptr, handle); }
+};
+
+class Program
+{
+    Window* mainWindow;
+
+public:
+    Program() : mainWindow(nullptr)
+    {}
+
+    bool Run(HINSTANCE instanceHandle, int showCommand)
+    {
+        mainWindow = CreateMainWindow(instanceHandle, showCommand);
+        if (mainWindow == nullptr)
+            return false;
+        MessageLoop();
+        return true;
+    }
+
+protected:
+    virtual Window* CreateMainWindow(HINSTANCE instanceHandle, int showCommand) = 0;
+
+private:
+    void MessageLoop()
+    {
+        MSG message;
+#if defined(IDLE)
+        for (; ;) {
+            if (::PeekMessage(&message, NULL, 0U, 0U, PM_REMOVE)) {
+                if (message.message == WM_QUIT)
+                    break;
+                ::TranslateMessage(&message);
+                ::DispatchMessage (&message);
+            } else {
+                if (mainWindow != nullptr)
+                    mainWindow->OnIdle();
+            }
+        }
+#else // IDLE
+        while (::GetMessage(&message, nullptr, 0, 0)) {
+            ::TranslateMessage(&message);
+            ::DispatchMessage (&message);
+        }
+#endif // IDLE
+    }
+};
+
 } // namespace Shos::Win32
