@@ -28,5 +28,8 @@
     <ClInclude Include="ShosLifeGameBoardPainter.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="ShosStopwatch.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

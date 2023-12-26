@@ -140,6 +140,7 @@
     <ClInclude Include="ShosDebug.h" />
     <ClInclude Include="ShosLifeGame.h" />
     <ClInclude Include="ShosLifeGameBoardPainter.h" />
+    <ClInclude Include="ShosStopwatch.h" />
     <ClInclude Include="ShosWin32.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

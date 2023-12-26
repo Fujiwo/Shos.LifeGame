@@ -1,6 +1,5 @@
 ﻿#include "../Shos.LifeGame/ShosLifeGame.h"
-
-#include "ShosStopwatch.h"
+#include "../Shos.LifeGame/ShosStopwatch.h"
 #include <thread>
 #include <vector>
 using namespace std;
@@ -23,7 +22,7 @@ namespace Shos::LifeGame::Test {
 
             Shos::LifeGame::Game game({ size, size });
 
-            Shos::stopwatch stopwatch;
+            Shos::stopwatch_viewer stopwatch_viewer;
             for (auto count = 0; count < times; count++)
                 game.Next();
         }

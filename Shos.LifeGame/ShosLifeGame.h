@@ -14,7 +14,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <cassert>
-using namespace std;
 
 namespace Shos::LifeGame {
 
@@ -25,8 +24,8 @@ using UnitInteger     = Byte         ;
 
 class Random
 {
-    random_device rd;
-    mt19937       engine;
+    std::random_device rd;
+    std::mt19937       engine;
 
 public:
     Random() : engine(rd())
@@ -119,11 +118,11 @@ public:
 class ThreadUtility
 {
 public:
-    static void ForEach(Integer minimum, Integer maximum, function<void(Integer, Integer)> action)
+    static void ForEach(Integer minimum, Integer maximum, std::function<void(Integer, Integer)> action)
     {
-        const auto     hardwareConcurrency = GetHardwareConcurrency();
-        const Integer  size                = maximum - minimum;
-        vector<thread> threads;
+        const auto               hardwareConcurrency = GetHardwareConcurrency();
+        const Integer            size                = maximum - minimum;
+        std::vector<std::thread> threads;
 
         for (auto threadIndex = 0U; threadIndex < hardwareConcurrency; threadIndex++) {
             const auto index = threadIndex;
@@ -140,7 +139,7 @@ public:
 private:
     static unsigned int GetHardwareConcurrency()
     {
-        auto hardwareConcurrency = thread::hardware_concurrency();
+        auto hardwareConcurrency = std::thread::hardware_concurrency();
         if (hardwareConcurrency == 0U)
             hardwareConcurrency = 1U;
         return hardwareConcurrency;
@@ -204,7 +203,7 @@ public:
 
     bool Get(const Point& point) const
     {
-        tuple<UnsignedInteger, Byte> bitIndex;
+        std::tuple<UnsignedInteger, Byte> bitIndex;
         if (!ToIndex(point, bitIndex))
             return false;
 
@@ -214,7 +213,7 @@ public:
 
     void Set(const Point& point, bool value)
     {
-        tuple<UnsignedInteger, Byte> bitIndex;
+        std::tuple<UnsignedInteger, Byte> bitIndex;
         if (!ToIndex(point, bitIndex))
             return;
 
@@ -244,7 +243,7 @@ private:
     UnsignedInteger GetUnitNumber() const
     { return unitNumberX * size.cy; }
 
-    bool ToIndex(const Point& point, tuple<UnsignedInteger, Byte>& bitIndex) const
+    bool ToIndex(const Point& point, std::tuple<UnsignedInteger, Byte>& bitIndex) const
     {
         if (!GetRect().IsIn(point))
             return false;
@@ -304,7 +303,7 @@ public:
         });
 #endif // FAST
 
-        swap(mainBoard, subBoard);
+        std::swap(mainBoard, subBoard);
         generation++;
     }
 

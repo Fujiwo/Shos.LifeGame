@@ -4,6 +4,7 @@ using namespace std;
 
 #include "ShosLifeGameBoardPainter.h"
 #include "ShosWin32.h"
+#include "ShosStopwatch.h"
 
 #if defined(UNICODE) || defined(_UNICODE)
 #define tstringstream wstringstream  
@@ -13,6 +14,7 @@ using namespace std;
 
 namespace Shos::LifeGame::Application {
 
+using namespace Shos;
 using namespace Shos::LifeGame;
 using namespace Shos::LifeGame::Win32;
 using namespace Shos::Win32;
@@ -31,6 +33,7 @@ class MainWindow : public Window
 #if defined(TIMER)
     Timer* timer;
 #endif // TIMER
+    stopwatch stopwatch;
 
 public:
     MainWindow() : game({ 800, 800 }), paintPosition({ 0, 0 }), renderingArea({ 0, 0, 0, 0 })
@@ -94,16 +97,32 @@ private:
 
     void Next()
     {
+        if (!stopwatch.is_running())
+            stopwatch.start();
+
         game.Next();
         Invalidate(renderingArea);
         SetTitle();
     }
 
     void SetTitle() const
+    { SetText(GetTitle()); }
+
+    LPCTSTR GetTitle() const
     {
+        const auto    generation = game.GetGeneration();
+        const auto    elapsed    = stopwatch.get_elapsed();
         tstringstream stream;
-        stream << _T("Sho's Life Game: (") << game.GetGeneration() << _T(")");
-        SetText(stream.str().c_str());
+        stream << _T("Sho's Life Game: generation(")
+               << generation
+               << _T("), epasped time(")
+               << std::setprecision(3)
+               << elapsed
+               << _T("), FPS(")
+               << std::setprecision(3)
+               << generation / elapsed
+               << _T(")");
+        return stream.str().c_str();
     }
 };
 
