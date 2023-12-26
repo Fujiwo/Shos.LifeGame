@@ -7,7 +7,7 @@
 
 namespace Shos::LifeGame::Win32 {
 
-class BoardPainter
+class BoardPainter final
 {
 public:
     static void Paint(HDC deviceContextHandle, const POINT& position, const Board& board)

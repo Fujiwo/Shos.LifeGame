@@ -20,7 +20,7 @@ using namespace Shos::LifeGame;
 using namespace Shos::LifeGame::Win32;
 using namespace Shos::Win32;
 
-class MainWindow : public Window
+class MainWindow final : public Window
 {
 #if defined(TIMER)
     static constexpr int timerTimeoutMilliseconds = 100;
@@ -44,7 +44,7 @@ public:
     {}
 
 #if defined(TIMER)
-    virtual ~MainWindow()
+    ~MainWindow()
     { delete timer; }
 #endif // TIMER
 

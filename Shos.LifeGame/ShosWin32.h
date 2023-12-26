@@ -26,6 +26,9 @@ public:
     Window() : handle(nullptr)
     {}
 
+    virtual ~Window()
+    {}
+
     bool Create(HINSTANCE instanceHandle, LPCTSTR windowClassName, LPCTSTR title, int showCommand)
     {
         RegisterWindowClass(instanceHandle, windowClassName);
@@ -193,7 +196,8 @@ private:
 #endif // USERMESSAGE
 };
 
-class Timer
+#if defined(TIMER)
+class Timer final
 {
     const UINT_PTR handle;
 
@@ -202,9 +206,10 @@ public:
         : handle(::SetTimer(window.GetHandle(), timerId, timeoutMilliseconds, nullptr))
     {}
 
-    virtual ~Timer()
+    ~Timer()
     { ::KillTimer(nullptr, handle); }
 };
+#endif // TIMER
 
 class Program
 {
@@ -212,6 +217,9 @@ class Program
 
 public:
     Program() : mainWindow(nullptr)
+    {}
+
+    virtual ~Program()
     {}
 
     bool Run(HINSTANCE instanceHandle, int showCommand)

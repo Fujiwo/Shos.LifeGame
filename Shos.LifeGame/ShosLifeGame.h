@@ -22,7 +22,7 @@ using UnsignedInteger = unsigned int ;
 using Byte            = unsigned char;
 using UnitInteger     = Byte         ;
 
-class Random
+class Random final
 {
     std::random_device rd;
     std::mt19937       engine;
@@ -35,7 +35,7 @@ public:
     { return engine(); }
 };
 
-struct Size
+struct Size final
 {
     Integer cx;
     Integer cy;
@@ -50,7 +50,7 @@ struct Size
     { return cx == size.cx && cy == size.cy; }
 };
 
-struct Point
+struct Point final
 {
     Integer x;
     Integer y;
@@ -68,7 +68,7 @@ struct Point
     { return { x + size.cx, y + size.cy }; }
 };
 
-struct Rect
+struct Rect final
 {
     Point leftTop;
     Size  size;
@@ -89,7 +89,7 @@ private:
 };
 
 #if !defined(FAST)
-class Utility
+class Utility final
 {
 public:
     static UnsignedInteger Count(const Rect& rect, function<bool(const Point&)> isMatch)
@@ -115,7 +115,7 @@ public:
 #endif // FAST
 
 #if defined(MT)
-class ThreadUtility
+class ThreadUtility final
 {
 public:
     static void ForEach(Integer minimum, Integer maximum, std::function<void(Integer, Integer)> action)
@@ -147,7 +147,7 @@ private:
 };
 #endif // MT
 
-class Board
+class Board final
 {
     const Size      size;
     UnsignedInteger unitNumberX;
@@ -164,7 +164,7 @@ public:
     Board(const Size& size) : size(size)
     { Initialize(); }
 
-    virtual ~Board()
+    ~Board()
     { delete[] cells; }
 
     void CopyTo(Board& board) const
@@ -259,7 +259,7 @@ private:
     { return Rect(Point(), size); }
 };
 
-class Game
+class Game final
 {
     Random             random    ;
     Board*             mainBoard ;
@@ -279,7 +279,7 @@ public:
     Game(const Size& size) : mainBoard(new Board(size)), subBoard(new Board(size)), generation(0UL)
     { Initialize(); }
 
-    virtual ~Game()
+    ~Game()
     {
         delete subBoard;
         delete mainBoard;

@@ -34,7 +34,7 @@ public:
     }
 };
 
-class stopwatch_viewer
+class stopwatch_viewer final
 {
     stopwatch stopwatch;
 
@@ -44,7 +44,7 @@ public:
     stopwatch_viewer()
     { stopwatch.start(); }
 
-    virtual ~stopwatch_viewer()
+    ~stopwatch_viewer()
     { show_result(stopwatch.get_elapsed()); }
 
 private:
