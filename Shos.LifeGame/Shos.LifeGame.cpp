@@ -8,7 +8,7 @@ using namespace std;
 #include "ShosStopwatch.h"
 
 #if defined(UNICODE) || defined(_UNICODE)
-#define tstringstream wstringstream  
+#define tstringstream wstringstream
 #else // UNICODE
 #define tstringstream stringstream
 #endif // UNICODE
@@ -82,6 +82,13 @@ protected:
     }
 #endif // TIMER
 
+    virtual void OnRightButtonUp(const POINT& point) override
+    {
+        UNREFERENCED_PARAMETER(point);
+
+        Reset();
+    }
+
 private:
     POINT PaintPosition() const
     {
@@ -104,6 +111,12 @@ private:
         game.Next();
         Invalidate(renderingArea);
         SetTitle();
+    }
+
+    void Reset()
+    {
+        game.Reset();
+        stopwatch.start();
     }
 
     void SetTitle() const

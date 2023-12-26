@@ -7,6 +7,7 @@
 #include <SDKDDKVer.h>
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <windowsx.h>
 #include <tchar.h>
 
 namespace Shos::Win32 {
@@ -104,6 +105,11 @@ protected:
     }
 #endif // TIMER
 
+    virtual void OnRightButtonUp(const POINT& point)
+    {
+        UNREFERENCED_PARAMETER(point);
+    }
+
     virtual void OnUserMessage(UINT message, WPARAM wParam, LPARAM lParam)
     {
         UNREFERENCED_PARAMETER(message);
@@ -121,31 +127,36 @@ private:
     static LRESULT CALLBACK windowProcedure(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam)
     {
         switch (message) {
-            case WM_CREATE: {
-                auto createStruct = reinterpret_cast<CREATESTRUCT*>(lParam);
-                auto self         = reinterpret_cast<Window*>(createStruct->lpCreateParams);
-                self->handle      = windowHandle;
-                SetSelf(windowHandle, self);
-                self->OnCreate();
-            }
-            break;
+                case WM_CREATE: {
+                    auto createStruct = reinterpret_cast<CREATESTRUCT*>(lParam);
+                    auto self         = reinterpret_cast<Window*>(createStruct->lpCreateParams);
+                    self->handle      = windowHandle;
+                    SetSelf(windowHandle, self);
+                    self->OnCreate();
+                }
+                break;
             case WM_PAINT: {
-                PAINTSTRUCT ps;
-                auto deviceContextHandle = ::BeginPaint(windowHandle, &ps);
-                GetSelf(windowHandle)->OnPaint(deviceContextHandle);
-                ::EndPaint(windowHandle, &ps);
-            }
-            break;
+                    PAINTSTRUCT ps;
+                    auto deviceContextHandle = ::BeginPaint(windowHandle, &ps);
+                    GetSelf(windowHandle)->OnPaint(deviceContextHandle);
+                    ::EndPaint(windowHandle, &ps);
+                }
+                break;
             case WM_SIZE: {
-                const auto size = SIZE { LOWORD(lParam), HIWORD(lParam) };
-                GetSelf(windowHandle)->OnSize(size);
-            }
-            break;
+                    const auto size = SIZE { LOWORD(lParam), HIWORD(lParam) };
+                    GetSelf(windowHandle)->OnSize(size);
+                }
+                break;
 #if defined(TIMER)
             case WM_TIMER:
                 GetSelf(windowHandle)->OnTimer(int(wParam));
                 break;
 #endif // TIMER
+            case WM_RBUTTONUP: {
+                    const POINT point = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+                    GetSelf(windowHandle)->OnRightButtonUp(point);
+                }
+                break;
             case WM_DESTROY:
                 ::PostQuitMessage(0);
                 break;

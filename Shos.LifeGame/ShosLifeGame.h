@@ -167,11 +167,11 @@ public:
     ~Board()
     { delete[] cells; }
 
-    void CopyTo(Board& board) const
-    {
-        assert(size == board.size);
-        ::memcpy(board.cells, cells, GetUnitNumber() * (sizeof(UnitInteger) / sizeof(Byte)));
-    }
+    //void CopyTo(Board& board) const
+    //{
+    //    assert(size == board.size);
+    //    ::memcpy(board.cells, cells, GetUnitNumber() * (sizeof(UnitInteger) / sizeof(Byte)));
+    //}
 
 #if !defined(FAST)
     void ForEach(function<void(const Point&)> action)
@@ -305,6 +305,12 @@ public:
 
         std::swap(mainBoard, subBoard);
         generation++;
+    }
+
+    void Reset()
+    {
+        Initialize();
+        generation = 0UL;
     }
 
 private:
