@@ -1,11 +1,12 @@
 ﻿#include <tchar.h>
 #include <sstream>
 #include <iomanip>
-using namespace std;
 
 #include "ShosLifeGameBoardPainter.h"
 #include "ShosWin32.h"
 #include "ShosStopwatch.h"
+
+using namespace std;
 
 #if defined(UNICODE) || defined(_UNICODE)
 #define tstringstream wstringstream
@@ -151,7 +152,7 @@ private:
     }
 };
 
-const TCHAR MainWindow::title[]           = _T("Shos.LifeGame");
+const TCHAR MainWindow::title[]           = _T("Shos.LifeGame"         );
 const TCHAR MainWindow::windowClassName[] = _T("ShosLifeGameMainWindow");
 
 class Program : public Shos::Win32::Program

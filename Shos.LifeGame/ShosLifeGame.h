@@ -1,7 +1,7 @@
 #pragma once
 
-#define FAST
-#define MT
+#define FAST // Fast loops enabled
+#define MT   // Multi-threading enabled
 
 #include <string>
 #if !defined(FAST) || defined(MT)

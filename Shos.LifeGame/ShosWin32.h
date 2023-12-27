@@ -1,8 +1,8 @@
 #pragma once
 
-//#define USERMESSAGE
-//#define TIMER
-#define IDLE
+//#define USERMESSAGE // OnUserMessage enabled
+//#define TIMER       // OnTimer enabled
+#define IDLE        // OnIdle enabled
 
 #include <SDKDDKVer.h>
 #define WIN32_LEAN_AND_MEAN
