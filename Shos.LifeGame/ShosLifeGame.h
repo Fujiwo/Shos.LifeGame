@@ -1,7 +1,8 @@
 #pragma once
 
-#define FAST // Fast loops enabled
-#define MT   // Multi-threading enabled
+#define FAST    // Fast loops enabled
+#define MT      // Multi-threading enabled
+//#define USEBOOL // Boolean enabled
 
 #include <string>
 #if !defined(FAST) || defined(MT)
@@ -93,7 +94,7 @@ private:
 class Utility final
 {
 public:
-    static UnsignedInteger Count(const Rect& rect, function<bool(const Point&)> isMatch)
+    static UnsignedInteger Count(const Rect& rect, std::function<bool(const Point&)> isMatch)
     {
         UnsignedInteger count = 0;
         ForEach(rect, [&](const Point& point) {
@@ -103,7 +104,7 @@ public:
         return count;
     }
 
-    static void ForEach(const Rect& rect, function<void(const Point&)> action)
+    static void ForEach(const Rect& rect, std::function<void(const Point&)> action)
     {
         const Point rightBottom = rect.RightBottom();
 
@@ -396,6 +397,220 @@ public:
 //    { return width * point.y + point.x; }
 };
 
+class BitCellSet
+{
+    const Size      size;
+    UnsignedInteger unitNumberX;
+    UnitInteger*    cells;
+
+public:
+    Size GetSize() const
+    { return size; }
+
+    UnitInteger* GetBits() const
+    { return cells; }
+
+    /// <remarks>size.cx must be a multiple of 8.</remarks>
+    BitCellSet(const Size& size) : size(size)
+    { Initialize(); }
+
+    virtual ~BitCellSet()
+    { delete[] cells; }
+
+    bool Get(const Point& point) const
+    {
+        std::tuple<UnsignedInteger, Byte> bitIndex;
+        if (!ToIndex(point, bitIndex))
+            return false;
+
+        const auto [index, bit] = bitIndex;
+        return (cells[index] & (1 << bit)) != 0;
+    }
+
+    void Set(const Point& point, bool value)
+    {
+        std::tuple<UnsignedInteger, Byte> bitIndex;
+        if (!ToIndex(point, bitIndex))
+            return;
+
+        const auto [index, bit] = bitIndex;
+        value ? (cells[index] |= 1 << bit)
+            : (cells[index] &= ~(1 << bit));
+    }
+    
+    void Clear() const
+    { ::memset(cells, 0, GetUnitNumber() * (sizeof(UnitInteger) / sizeof(Byte))); }
+
+    //void CopyTo(BitCellSet& bitCellSet) const
+    //{
+    //    assert(size == bitCellSet.size);
+    //    ::memcpy(bitCellSet.cells, cells, GetUnitNumber() * (sizeof(UnitInteger) / sizeof(Byte)));
+    //}
+
+#if !defined(FAST)
+    void ForEach(std::function<void(const Point&)> action)
+    {
+        Utility::ForEach(GetRect(), action);
+    }
+#endif // FAST
+
+private:
+    void Initialize()
+    {
+        InitializeUnitNumberX();
+        const auto unitNumber = GetUnitNumber();
+        cells                 = new UnitInteger[unitNumber];
+        Clear();
+    }
+
+    void InitializeUnitNumberX()
+    {
+        unitNumberX = size.cx / sizeof(UnitInteger);
+        if (size.cx % sizeof(UnitInteger) != 0) {
+            assert(false);
+            unitNumberX++;
+        }
+    }
+
+    UnsignedInteger GetUnitNumber() const
+    { return unitNumberX * size.cy; }
+
+    bool ToIndex(const Point& point, std::tuple<UnsignedInteger, Byte>& bitIndex) const
+    {
+        if (!GetRect().IsIn(point))
+            return false;
+
+        constexpr auto bitNumber = sizeof(UnitInteger) * 8;
+        const auto index         = UnsignedInteger(unitNumberX * point.y + point.x / bitNumber);
+        const auto bit           = Byte(point.x % bitNumber);
+        bitIndex                 = { index, bit };
+        return true;
+    }
+
+    Rect GetRect() const
+    { return Rect(Point(), size); }
+};
+
+
+#if defined(USEBOOL)
+
+class Board final
+{
+    const Size      size;
+    bool**          cells;
+    BitCellSet*     bitCellSet;
+
+public:
+    Size GetSize() const
+    { return size; }
+
+    UnitInteger* GetBits()
+    {
+        delete bitCellSet;
+        bitCellSet = new BitCellSet(size);
+
+#if defined(FAST)
+        for (auto point = Point{ 0, 0 }; point.y < size.cy; point.y++) {
+            for (point.x = 0; point.x < size.cx; point.x++)
+                bitCellSet->Set(point, Get(point));
+        }
+#else // FAST
+        Utility::ForEach(Rect{ Point {0, 0}, size }, [&](const Point& point) { bitCellSet->Set(point, Get(point)); });
+#endif // FAST
+
+        return bitCellSet->GetBits();
+    }
+
+    /// <remarks>size.cx must be a multiple of 8.</remarks>
+    Board(const Size& size) : size(size), bitCellSet(nullptr)
+    { Initialize(); }
+
+    ~Board()
+    {
+        delete[] bitCellSet;
+        delete[] cells     ;
+    }
+
+    bool Set(const Pattern& pattern)
+    {
+        const auto patternSize    = pattern.GetSize();
+        const auto bitCellSetSize = GetSize();
+        if (patternSize.cx > bitCellSetSize.cx || patternSize.cy > bitCellSetSize.cy)
+            return false;
+
+        Clear();
+
+        const auto startPoint = Point{ (bitCellSetSize.cx - patternSize.cx) / 2, (bitCellSetSize.cy - patternSize.cy) / 2 };
+        size_t     patternIndex = 0U;
+
+#if defined(FAST)
+        for (Point point = startPoint; point.y < startPoint.y + patternSize.cy; point.y++) {
+            for (point.x = startPoint.x; point.x < startPoint.x + patternSize.cx; point.x++)
+                Set(point, pattern[patternIndex++]);
+        }
+#else // FAST
+        Utility::ForEach(Rect{ startPoint, patternSize }, [&](const Point& point) { Set(point, pattern[patternIndex++]); });
+#endif // FAST
+
+        return true;
+    }
+
+#if !defined(FAST)
+    void ForEach(std::function<void(const Point&)> action)
+    {
+        Utility::ForEach(GetRect(), action);
+    }
+#endif // FAST
+
+    UnsignedInteger GetAliveNeighborCount(const Point& point) const
+    {
+#if defined(FAST)
+        UnsignedInteger count = 0;
+        for (Point neighborPoint = { point.x - 1, point.y - 1 }; neighborPoint.y <= point.y + 1; neighborPoint.y++) {
+            for (neighborPoint.x = point.x - 1; neighborPoint.x <= point.x + 1; neighborPoint.x++) {
+                if (neighborPoint == point)
+                    continue;
+                if (Get(neighborPoint))
+                    count++;
+            }
+        }
+        return count;
+#else // FAST
+        return Utility::Count(
+            Rect(point + Size(-1, -1), Size(3, 3)),
+            [&](const Point& neighborPoint) {
+                return neighborPoint != point && Get(neighborPoint);
+            }
+        );
+#endif // FAST
+    }
+
+    bool Get(const Point& point) const
+    { return GetRect().IsIn(point) ? cells[point.y][point.x] : false; }
+
+    void Set(const Point& point, bool value)
+    { cells[point.y][point.x] = value; }
+
+private:
+    void Initialize()
+    {
+        cells = new bool*[size.cy];
+        for (auto y = 0; y < size.cy; y++)
+            cells[y] = new bool[size.cx];
+
+        Clear();
+    }
+
+    void Clear() const
+    {
+        for (auto y = 0; y < size.cy; y++)
+            ::memset(cells[y], 0, sizeof(bool) * size.cx);
+    }
+
+    Rect GetRect() const
+    { return Rect(Point(), size); }
+};
+#else // USEBOOL
 class Board final
 {
     const Size      size;
@@ -406,30 +621,36 @@ public:
     Size GetSize() const
     { return size; }
 
-    UnitInteger* GetCells() const
+    UnitInteger* GetBits() const
     { return cells; }
 
     /// <remarks>size.cx must be a multiple of 8.</remarks>
     Board(const Size& size) : size(size)
     { Initialize(); }
+    //Board(const Size& size)
+    //    : BitCellSet(size)
+    //{}
 
-    /// <remarks>size.cx must be a multiple of 8.</remarks>
+    ~Board()
+    { delete[] cells; }
+
     bool Set(const Pattern& pattern)
     {
-        const auto patternSize = pattern.GetSize();
-        if (patternSize.cx > size.cx || patternSize.cy > size.cy)
+        const auto patternSize    = pattern.GetSize();
+        const auto bitCellSetSize = GetSize();
+        if (patternSize.cx > bitCellSetSize.cx || patternSize.cy > bitCellSetSize.cy)
             return false;
 
         Clear();
 
-        const auto startPoint   = Point { (size.cx - patternSize.cx) / 2, (size.cy - patternSize.cy) / 2 };
+        const auto startPoint   = Point { (bitCellSetSize.cx - patternSize.cx) / 2, (bitCellSetSize.cy - patternSize.cy) / 2 };
         size_t     patternIndex = 0U;
 
 #if defined(FAST)
         for (Point point = startPoint; point.y < startPoint.y + patternSize.cy; point.y++) {
             for (point.x = startPoint.x; point.x < startPoint.x + patternSize.cx; point.x++)
                 Set(point, pattern[patternIndex++]);
-    }
+        }
 #else // FAST
         Utility::ForEach(Rect{ startPoint, patternSize }, [](const Point& point) { Set(point, pattern[patternIndex++]); });
 #endif // FAST
@@ -437,18 +658,11 @@ public:
         return true;
     }
 
-    ~Board()
-    { delete[] cells; }
-
-    //void CopyTo(Board& board) const
-    //{
-    //    assert(size == board.size);
-    //    ::memcpy(board.cells, cells, GetUnitNumber() * (sizeof(UnitInteger) / sizeof(Byte)));
-    //}
-
 #if !defined(FAST)
     void ForEach(function<void(const Point&)> action)
     { Utility::ForEach(GetRect(), action); }
+    //void ForEach(function<void(const Point&)> action)
+    //{ bitCellSet.ForEach(GetRect(), action); }
 #endif // FAST
 
     UnsignedInteger GetAliveNeighborCount(const Point& point) const
@@ -535,6 +749,7 @@ private:
     Rect GetRect() const
     { return Rect(Point(), size); }
 };
+#endif // USEBOOL
 
 class Game final
 {

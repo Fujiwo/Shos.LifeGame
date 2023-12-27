@@ -10,7 +10,7 @@ namespace Shos::LifeGame::Win32 {
 class BoardPainter final
 {
 public:
-    static void Paint(HDC deviceContextHandle, const POINT& position, const Board& board)
+    static void Paint(HDC deviceContextHandle, const POINT& position, Board& board)
     {
         const auto bitmapHandle = CreateBitmap(board);
         Paint(deviceContextHandle, position, { board.GetSize().cx, board.GetSize().cy }, bitmapHandle);
@@ -18,7 +18,7 @@ public:
     }
 
 private:
-    static HBITMAP CreateBitmap(const Board& board)
+    static HBITMAP CreateBitmap(Board& board)
     {
         BITMAP bitmap;
         ::ZeroMemory(&bitmap, sizeof(BITMAP));
@@ -27,7 +27,7 @@ private:
         bitmap.bmPlanes     = 1;
         bitmap.bmWidthBytes = board.GetSize().cx / sizeof(Byte);
         bitmap.bmBitsPixel  = 1;
-        bitmap.bmBits       = board.GetCells();
+        bitmap.bmBits       = board.GetBits();
 
         return ::CreateBitmapIndirect(&bitmap);
     }
