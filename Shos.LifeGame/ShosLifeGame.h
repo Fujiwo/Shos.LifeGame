@@ -454,6 +454,10 @@ public:
     }
 #endif // FAST
 
+protected:
+    Rect GetRect() const
+    { return Rect(Point(), size); }
+
 private:
     void Initialize()
     {
@@ -486,14 +490,9 @@ private:
         bitIndex                 = { index, bit };
         return true;
     }
-
-    Rect GetRect() const
-    { return Rect(Point(), size); }
 };
 
-
 #if defined(USEBOOL)
-
 class Board final
 {
     const Size      size;
@@ -611,28 +610,11 @@ private:
     { return Rect(Point(), size); }
 };
 #else // USEBOOL
-class Board final
+class Board final : public BitCellSet
 {
-    const Size      size;
-    UnsignedInteger unitNumberX;
-    UnitInteger*    cells;
-
 public:
-    Size GetSize() const
-    { return size; }
-
-    UnitInteger* GetBits() const
-    { return cells; }
-
-    /// <remarks>size.cx must be a multiple of 8.</remarks>
-    Board(const Size& size) : size(size)
-    { Initialize(); }
-    //Board(const Size& size)
-    //    : BitCellSet(size)
-    //{}
-
-    ~Board()
-    { delete[] cells; }
+    Board(const Size& size) : BitCellSet(size)
+    {}
 
     bool Set(const Pattern& pattern)
     {
@@ -652,17 +634,15 @@ public:
                 Set(point, pattern[patternIndex++]);
         }
 #else // FAST
-        Utility::ForEach(Rect{ startPoint, patternSize }, [](const Point& point) { Set(point, pattern[patternIndex++]); });
+        Utility::ForEach(Rect{ startPoint, patternSize }, [&](const Point& point) { Set(point, pattern[patternIndex++]); });
 #endif // FAST
 
         return true;
     }
 
 #if !defined(FAST)
-    void ForEach(function<void(const Point&)> action)
+    void ForEach(std::function<void(const Point&)> action)
     { Utility::ForEach(GetRect(), action); }
-    //void ForEach(function<void(const Point&)> action)
-    //{ bitCellSet.ForEach(GetRect(), action); }
 #endif // FAST
 
     UnsignedInteger GetAliveNeighborCount(const Point& point) const
@@ -689,65 +669,10 @@ public:
     }
 
     bool Get(const Point& point) const
-    {
-        std::tuple<UnsignedInteger, Byte> bitIndex;
-        if (!ToIndex(point, bitIndex))
-            return false;
-
-        const auto [index, bit] = bitIndex;
-        return (cells[index] & (1 << bit)) != 0;
-    }
-
+    { return  BitCellSet::Get(point); }
+    
     void Set(const Point& point, bool value)
-    {
-        std::tuple<UnsignedInteger, Byte> bitIndex;
-        if (!ToIndex(point, bitIndex))
-            return;
-
-        const auto [index, bit] = bitIndex;
-        value ? (cells[index] |=   1 << bit )
-              : (cells[index] &= ~(1 << bit));
-    }
-
-private:
-    void Initialize()
-    {
-        InitializeUnitNumberX();
-        const auto unitNumber = GetUnitNumber();
-        cells                 = new UnitInteger[unitNumber];
-        Clear();
-        //::memset(cells, 0, unitNumber * (sizeof(UnitInteger) / sizeof(Byte)));
-    }
-
-    void Clear() const
-    { ::memset(cells, 0, GetUnitNumber() * (sizeof(UnitInteger) / sizeof(Byte))); }
-
-    void InitializeUnitNumberX()
-    {
-        unitNumberX = size.cx / sizeof(UnitInteger);
-        if (size.cx % sizeof(UnitInteger) != 0) {
-            assert(false);
-            unitNumberX++;
-        }
-    }
-
-    UnsignedInteger GetUnitNumber() const
-    { return unitNumberX * size.cy; }
-
-    bool ToIndex(const Point& point, std::tuple<UnsignedInteger, Byte>& bitIndex) const
-    {
-        if (!GetRect().IsIn(point))
-            return false;
-
-        constexpr auto bitNumber = sizeof(UnitInteger) * 8;
-        const auto index         = UnsignedInteger(unitNumberX * point.y + point.x / bitNumber);
-        const auto bit           = Byte(point.x % bitNumber);
-        bitIndex                 = { index, bit };
-        return true;
-    }
-
-    Rect GetRect() const
-    { return Rect(Point(), size); }
+    { BitCellSet::Set(point, value); }
 };
 #endif // USEBOOL
 
