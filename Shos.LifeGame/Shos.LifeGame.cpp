@@ -29,11 +29,11 @@ class MainWindow final : public Window
     static const TCHAR  title[];
     static const TCHAR  windowClassName[];
 
-    Game   game;
-    POINT  paintPosition;
-    RECT   renderingArea;
+    Game      game;
+    POINT     paintPosition;
+    RECT      renderingArea;
 #if defined(TIMER)
-    Timer* timer;
+    Timer*    timer;
 #endif // TIMER
     stopwatch stopwatch;
 
