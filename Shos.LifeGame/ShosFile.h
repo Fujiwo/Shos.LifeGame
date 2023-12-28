@@ -20,6 +20,10 @@ public:
     {
         using namespace std::filesystem;
 
+        filePaths.clear();
+        if (!is_directory(folderPath))
+            return false;
+
         directory_iterator end;
         std::error_code    err;
 
