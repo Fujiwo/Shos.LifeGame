@@ -9,6 +9,9 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
     </Filter>
+    <Filter Include="CellData">
+      <UniqueIdentifier>{3b80e30a-8cc2-45a5-9320-b606ec3730dc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Shos.LifeGame.cpp">
@@ -31,5 +34,130 @@
     <ClInclude Include="ShosStopwatch.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="ShosFile.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="CellData\BHeptominoPufferTrain.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\BlockLayingSwitchEngine.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Breeder1.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Breeder2.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Breeder3.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\FlyingMachine.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Fuse_Baker.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Gun_GosperGliderGun.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Gun_Gunstar.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Gun_Gunstar2.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Gun_NewGun1.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Gun_NewGun2.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Gun_SidecarGun.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\HertzOscillator.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Max.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Methuselah_Acorn.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Methuselah_Bunnies.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Methuselah_Herschel.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Methuselah_Lidka.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Methuselah_QueenBee.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Methuselah_RPentomino.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Methuselah_SwitchEngine.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Oscillator_FigureEight.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Oscillator_Pulsar.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Oscillator_Toad.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Pentadecathlon1.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Pentadecathlon2.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Puffer_BlinkerPuffer1.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Puffer_NoahsArk.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Puffer_Puffer1.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Pulsar.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Shuttle_Oscillator_QueenBeeShuttle.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Shuttle_Oscillator_TwinBeesShuttle.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Spaceship_Glider.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Spaceship_HeavyWeightSpaceship.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Spaceship_LightWeightSpaceship.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Spaceship_MiddleWeightSpaceship.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\TTetrominoPufferTrain.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\User.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Wick_Ants.lif">
+      <Filter>CellData</Filter>
+    </None>
   </ItemGroup>
 </Project>

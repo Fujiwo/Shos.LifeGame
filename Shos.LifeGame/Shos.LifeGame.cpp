@@ -83,13 +83,11 @@ protected:
     }
 #endif // TIMER
 
-    virtual void OnKeyDown(int key)
+    virtual void OnChar(TCHAR character) override
     {
-        UNREFERENCED_PARAMETER(key);
-        const auto number = key - '0';
-        if (0 <= number && number < int(Pattern::Type::PatternCount))
-            game.Set(static_cast<Pattern::Type>(number));
-        else if (key == VK_ESCAPE)
+        //if (0 <= index && index < int(Pattern::Type::PatternCount))
+            //game.Set(static_cast<Pattern::Type>(KeyToNumber(key)));
+        if (!game.SetPattern(KeyToIndex(character)))
             Reset();
     }
 
@@ -101,6 +99,12 @@ protected:
     }
 
 private:
+    static int KeyToIndex(TCHAR character)
+    { return _istalpha(character) ? AlphaToIndex(character) : (_istdigit(character) ? character - '0' : -1); }
+
+    static int AlphaToIndex(TCHAR character)
+    { return _istlower(character) ? character - 'a' + 10 : character - 'A' + 10 + 26; }
+
     POINT PaintPosition() const
     {
         const auto clientCenter = Center(GetClientRect());
@@ -133,22 +137,25 @@ private:
     void SetTitle() const
     { SetText(GetTitle()); }
 
-    LPCTSTR GetTitle() const
+    tstring GetTitle() const
     {
-        const auto    generation = game.GetGeneration();
-        const auto    elapsed    = stopwatch.get_elapsed();
+        const auto    generation  = game.GetGeneration();
+        const auto    patternName = game.GetPatternName();
+        const auto    elapsed     = stopwatch.get_elapsed();
         tstringstream stream;
         stream << _T("Sho's Life Game: generation(")
                << generation
-               << _T("), epasped time(")
+               << _T("), time(")
                << std::fixed
                << std::setprecision(1)
                << elapsed
                << _T("), FPS(")
                << std::setprecision(0)
                << generation / elapsed
+               << _T("), pattern(")
+               << patternName
                << _T(")");
-        return stream.str().c_str();
+        return stream.str();
     }
 };
 

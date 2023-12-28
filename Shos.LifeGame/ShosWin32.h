@@ -65,8 +65,8 @@ public:
         return clientRect;
     }
 
-    void SetText(LPCTSTR text) const
-    { ::SetWindowText(handle, text); }
+    void SetText(tstring text) const
+    { ::SetWindowText(handle, text.c_str()); }
 
 #if defined(USERMESSAGE)
     void PostMessage(UINT message, WPARAM wParam = 0, LPARAM lParam = 0) const
@@ -105,9 +105,14 @@ protected:
     }
 #endif // TIMER
 
-    virtual void OnKeyDown(int key)
+    //virtual void OnKeyDown(int key)
+    //{
+    //    UNREFERENCED_PARAMETER(key);
+    //}
+
+    virtual void OnChar(TCHAR character)
     {
-        UNREFERENCED_PARAMETER(key);
+        UNREFERENCED_PARAMETER(character);
     }
 
     virtual void OnRightButtonUp(const POINT& point)
@@ -157,9 +162,14 @@ private:
                 GetSelf(windowHandle)->OnTimer(int(wParam));
                 break;
 #endif // TIMER
-            case WM_KEYDOWN: {
-                    const auto key = int(wParam);
-                    GetSelf(windowHandle)->OnKeyDown(key);
+            //case WM_KEYDOWN: {
+            //        const auto key = int(wParam);
+            //        GetSelf(windowHandle)->OnKeyDown(key);
+            //    }
+            //    break;
+            case WM_CHAR: {
+                    const auto character = TCHAR(wParam);
+                    GetSelf(windowHandle)->OnChar(character);
                 }
                 break;
             case WM_RBUTTONUP: {
