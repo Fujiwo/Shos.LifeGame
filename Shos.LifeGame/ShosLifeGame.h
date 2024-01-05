@@ -3,6 +3,7 @@
 #define FAST    // Fast loops enabled
 #define MT      // Multi-threading enabled
 //#define USEBOOL // Boolean enabled
+#define AREA    // Area enabled
 
 #include <string>
 #if !defined(FAST) || defined(MT)
@@ -524,15 +525,29 @@ class BitCellSet
     UnsignedInteger unitNumberX;
     UnitInteger*    cells;
 
+#if defined(AREA)
+    Rect            area;
+#endif // AREA
+
 public:
     Size GetSize() const
     { return size; }
+
+    const Rect& GetArea() const
+#if defined(AREA)
+    { return area; }
+#else // AREA
+    { return GetRect(); }
+#endif // AREA
 
     UnitInteger* GetBits() const
     { return cells; }
 
     /// <remarks>size.cx must be a multiple of 8.</remarks>
     BitCellSet(const Size& size) : size(size)
+#if defined(AREA)
+        , area{ Point(size.cx / 2, size.cy / 2), Size() }
+#endif // AREA
     { Initialize(); }
 
     virtual ~BitCellSet()
@@ -555,8 +570,17 @@ public:
             return;
 
         const auto [index, bit] = bitIndex;
+#if defined(AREA)
+        if (value) {
+            cells[index] |= 1 << bit;
+            Union(area, GetRect(), point);
+        } else {
+            cells[index] &= ~(1 << bit);
+        }
+#else // AREA
         value ? (cells[index] |= 1 << bit)
-            : (cells[index] &= ~(1 << bit));
+              : (cells[index] &= ~(1 << bit));
+#endif // AREA
     }
     
     void Clear() const
@@ -570,10 +594,25 @@ public:
 
 #if !defined(FAST)
     void ForEach(std::function<void(const Point&)> action)
-    {
-        Utility::ForEach(GetRect(), action);
-    }
+    { Utility::ForEach(GetRect(), action); }
 #endif // FAST
+
+#if defined(AREA)
+    static void Union(Rect& area, const Rect& rect, const Point& point)
+    {
+        const auto rightBottom     = rect.RightBottom();
+        const auto areaRightBottom = area.RightBottom();
+        const auto left            = std::max(std::min(area.leftTop.x   , point.x - 1    ), rect.leftTop.x);
+        const auto top             = std::max(std::min(area.leftTop.y   , point.y - 1    ), rect.leftTop.y);
+        const auto right           = std::min(std::max(areaRightBottom.x, point.x + 1 + 1), rightBottom.x );
+        const auto bottom          = std::min(std::max(areaRightBottom.y, point.y + 1 + 1), rightBottom.y );
+
+        area.leftTop.x = left        ;
+        area.leftTop.y = top         ;
+        area.size.cx   = right - left;
+        area.size.cy   = bottom - top;
+    }
+#endif // AREA
 
 protected:
     Rect GetRect() const
@@ -620,9 +659,20 @@ class Board final
     bool**          cells;
     BitCellSet*     bitCellSet;
 
+#if defined(AREA)
+    Rect            area;
+#endif // AREA
+
 public:
     Size GetSize() const
     { return size; }
+
+    const Rect& GetArea() const
+#if defined(AREA)
+    { return area; }
+#else // AREA
+    { return GetRect(); }
+#endif // AREA
 
     UnitInteger* GetBits()
     {
@@ -643,6 +693,9 @@ public:
 
     /// <remarks>size.cx must be a multiple of 8.</remarks>
     Board(const Size& size) : size(size), bitCellSet(nullptr)
+#if defined(AREA)
+        , area{ Point(size.cx / 2, size.cy / 2), Size() }
+#endif // AREA
     { Initialize(); }
 
     ~Board()
@@ -678,7 +731,11 @@ public:
 #if !defined(FAST)
     void ForEach(std::function<void(const Point&)> action)
     {
+#if defined(AREA)
         Utility::ForEach(GetRect(), action);
+#else // AREA
+        Utility::ForEach(area, action);
+#endif // AREA
     }
 #endif // FAST
 
@@ -709,7 +766,13 @@ public:
     { return GetRect().IsIn(point) ? cells[point.y][point.x] : false; }
 
     void Set(const Point& point, bool value)
-    { cells[point.y][point.x] = value; }
+    {
+        cells[point.y][point.x] = value;
+#if defined(AREA)
+        if (value)
+            BitCellSet::Union(area, GetRect(), point);
+#endif // AREA
+    }
 
 private:
     void Initialize()
@@ -763,7 +826,13 @@ public:
 
 #if !defined(FAST)
     void ForEach(std::function<void(const Point&)> action)
-    { Utility::ForEach(GetRect(), action); }
+    {
+#if defined(AREA)
+        Utility::ForEach(GetRect(), action);
+#else // AREA
+        Utility::ForEach(area, action);
+#endif // AREA
+    }
 #endif // FAST
 
     UnsignedInteger GetAliveNeighborCount(const Point& point) const
@@ -830,14 +899,24 @@ public:
 
     void Next()
     {
-#if defined(MT)
-        const auto size = mainBoard->GetSize();
 
-        ThreadUtility::ForEach(0, size.cy, [=](Integer minimum, Integer maximum) {
-            NextPart(Point(0, minimum), Point(size.cx, maximum));
+#if defined(MT)
+        //const auto size = mainBoard->GetSize();
+
+        //ThreadUtility::ForEach(0, size.cy, [=](Integer minimum, Integer maximum) {
+        //    NextPart(Point(0, minimum), Point(size.cx, maximum));
+        //});
+
+        const auto area            = mainBoard->GetArea();
+        const auto areaRightBottom = area.RightBottom();
+
+        ThreadUtility::ForEach(area.leftTop.y, areaRightBottom.y, [=](Integer minimum, Integer maximum) {
+            NextPart(Point(area.leftTop.x, minimum), Point(areaRightBottom.x, maximum));
         });
 #elif defined(FAST)
-        NextPart(Point(), Point() + mainBoard->GetSize());
+        //NextPart(Point(), Point() + mainBoard->GetSize());
+        const auto area = mainBoard->GetArea();
+        NextPart(area.leftTop, area.RightBottom());
 #else // FAST
         mainBoard->ForEach([&](const Point& point) {
             const auto aliveNeighborCount = mainBoard->GetAliveNeighborCount(point);
