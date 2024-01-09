@@ -86,8 +86,7 @@ struct Rect final
     Size  size;
 
     Point RightBottom() const
-//    { return leftTop + size; }
-    { return Point(leftTop.x + size.cx, leftTop.y + size.cy); }
+    { return leftTop + size; }
 
 #if defined(AREA) && defined(MT)
     Rect()
