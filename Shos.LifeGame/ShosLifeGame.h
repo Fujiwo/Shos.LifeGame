@@ -6,13 +6,12 @@
 #define AREA    // Area enabled
 
 #include <string>
-#if !defined(FAST) || defined(MT)
 #include <functional>
-#endif // FAST
 #include <tuple>
 #if defined(MT)
 #include <thread>
 #endif // MT
+
 #include <random>
 #include <algorithm>
 #include <sstream>
@@ -21,6 +20,9 @@
 #include <cassert>
 #include <tchar.h>
 #include "ShosFile.h"
+#if defined(_DEBUG)
+#include "ShosDebug.h"
+#endif // _DEBUG
 
 namespace Shos::LifeGame {
 
@@ -72,7 +74,10 @@ struct Point final
     { return x == point.x && y == point.y; }
 
     Point operator +(const Size& size) const
-    { return { x + size.cx, y + size.cy }; }
+    { return Point(x + size.cx, y + size.cy); }
+
+    Size operator -(const Point& point) const
+    { return Size(x - point.x, y - point.y); }
 };
 
 struct Rect final
@@ -81,7 +86,41 @@ struct Rect final
     Size  size;
 
     Point RightBottom() const
-    { return leftTop + size; }
+//    { return leftTop + size; }
+    { return Point(leftTop.x + size.cx, leftTop.y + size.cy); }
+
+#if defined(AREA) && defined(MT)
+    Rect()
+    {}
+
+    static Rect Union(const Rect* rects, unsigned int count)
+    {
+        assert(count > 0);
+
+        const auto rect0RightBottom = rects[0].RightBottom();
+        auto left                   = rects[0].leftTop.x;
+        auto top                    = rects[0].leftTop.y;
+        auto right                  = rect0RightBottom.x;
+        auto bottom                 = rect0RightBottom.y;
+
+        for (auto index = 1U; index < count; index++) {
+            const auto& rect            = rects[index];
+            const auto  rectRightBottom = rect.RightBottom();
+            left   = std::min(left  , rect.leftTop   .x);
+            top    = std::min(top   , rect.leftTop   .y);
+            right  = std::max(right , rectRightBottom.x);
+            bottom = std::max(bottom, rectRightBottom.y);
+        }
+
+        return Rect(Point(left, top), Point(right, bottom));
+    }
+#endif // AREA && MT
+
+    Rect(const Point& leftTop, const Size& size) : leftTop(leftTop), size(size)
+    {}
+
+    Rect(const Point& leftTop, const Point& rightBottom) : leftTop(leftTop), size(rightBottom - leftTop)
+    {}
 
     bool IsIn(const Point& point) const
     {
@@ -170,10 +209,29 @@ public:
 class ThreadUtility final
 {
 public:
+#if defined(AREA)
+    static void ForEach(Integer minimum, Integer maximum, std::function<void(Integer, Integer, unsigned int)> action)
+    {
+        const auto               hardwareConcurrency = GetHardwareConcurrency();
+        const Integer            size = maximum - minimum;
+        std::vector<std::thread> threads;
+
+        for (auto threadIndex = 0U; threadIndex < hardwareConcurrency; threadIndex++) {
+            const auto index = threadIndex;
+            const auto begin = minimum + size * index / hardwareConcurrency;
+            const auto end   = minimum + (index == hardwareConcurrency - 1 ? size
+                                                                           : size * (index + 1) / hardwareConcurrency);
+            threads.emplace_back([=]() { action(begin, end, threadIndex); });
+        }
+
+        for (auto& thread : threads)
+            thread.join();
+    }
+#else // AREA
     static void ForEach(Integer minimum, Integer maximum, std::function<void(Integer, Integer)> action)
     {
         const auto               hardwareConcurrency = GetHardwareConcurrency();
-        const Integer            size                = maximum - minimum;
+        const Integer            size = maximum - minimum;
         std::vector<std::thread> threads;
 
         for (auto threadIndex = 0U; threadIndex < hardwareConcurrency; threadIndex++) {
@@ -189,6 +247,7 @@ public:
     }
 
 private:
+#endif // AREA
     static unsigned int GetHardwareConcurrency()
     {
         auto hardwareConcurrency = std::thread::hardware_concurrency();
@@ -533,11 +592,23 @@ public:
     Size GetSize() const
     { return size; }
 
-    const Rect& GetArea() const
+    Rect GetArea() const
 #if defined(AREA)
     { return area; }
+
+    static Rect GetDefaultArea(const Rect& rect)
+    { return Rect(Point(rect.leftTop.x + std::max(0, rect.size.cx / 2 - 1), rect.leftTop.y + std::max(0, rect.size.cy / 2 - 1)), Size(std::min(rect.size.cx, 3), std::min(rect.size.cy, 3))); }
+
+#if defined(MT)
+    void SetArea(const Rect& newArea)
+    { area = newArea; }
+#endif // MT
+
 #else // AREA
     { return GetRect(); }
+#endif // AREA
+
+#if defined(AREA)
 #endif // AREA
 
     UnitInteger* GetBits() const
@@ -546,7 +617,7 @@ public:
     /// <remarks>size.cx must be a multiple of 8.</remarks>
     BitCellSet(const Size& size) : size(size)
 #if defined(AREA)
-        , area{ Point(size.cx / 2, size.cy / 2), Size() }
+        , area(GetDefaultArea(Rect(Point(), size)))
 #endif // AREA
     { Initialize(); }
 
@@ -565,26 +636,47 @@ public:
 
     void Set(const Point& point, bool value)
     {
+#if defined(AREA)
         std::tuple<UnsignedInteger, Byte> bitIndex;
         if (!ToIndex(point, bitIndex))
             return;
 
         const auto [index, bit] = bitIndex;
-#if defined(AREA)
         if (value) {
             cells[index] |= 1 << bit;
-            Union(area, GetRect(), point);
+            area = Union(area, GetRect(), point);
+#if defined(_DEBUG)
+            const auto rightBottom     = GetRect().RightBottom();
+            const auto areaRightBottom = area     .RightBottom();
+            assert(point.x == GetRect().leftTop.x || point.x == rightBottom.x - 1 || (area.leftTop.x < point.x && point.x < areaRightBottom.x - 1));
+            assert(point.y == GetRect().leftTop.y || point.y == rightBottom.y - 1 || (area.leftTop.y < point.y && point.y < areaRightBottom.y - 1));
+#endif // _DEBUG
         } else {
             cells[index] &= ~(1 << bit);
         }
 #else // AREA
-        value ? (cells[index] |= 1 << bit)
-              : (cells[index] &= ~(1 << bit));
+        SetOnly(point, value);
 #endif // AREA
     }
-    
-    void Clear() const
-    { ::memset(cells, 0, GetUnitNumber() * (sizeof(UnitInteger) / sizeof(Byte))); }
+
+    void SetOnly(const Point& point, bool value)
+    {
+        std::tuple<UnsignedInteger, Byte> bitIndex;
+        if (!ToIndex(point, bitIndex))
+            return;
+
+        const auto [index, bit] = bitIndex;
+        value ? (cells[index] |= 1 << bit)
+              : (cells[index] &= ~(1 << bit));
+    }
+
+    void Clear()
+    {
+        ::memset(cells, 0, GetUnitNumber() * (sizeof(UnitInteger) / sizeof(Byte)));
+#if defined(AREA)
+        area = GetDefaultArea(GetRect());
+#endif // AREA
+    }
 
     //void CopyTo(BitCellSet& bitCellSet) const
     //{
@@ -598,27 +690,60 @@ public:
 #endif // FAST
 
 #if defined(AREA)
-    static void Union(Rect& area, const Rect& rect, const Point& point)
+    static Rect Union(const Rect& area, const Rect& rect, const Point& point)
     {
         const auto rightBottom     = rect.RightBottom();
         const auto areaRightBottom = area.RightBottom();
-        const auto left            = std::max(std::min(area.leftTop.x   , point.x - 1    ), rect.leftTop.x);
-        const auto top             = std::max(std::min(area.leftTop.y   , point.y - 1    ), rect.leftTop.y);
-        const auto right           = std::min(std::max(areaRightBottom.x, point.x + 1 + 1), rightBottom.x );
-        const auto bottom          = std::min(std::max(areaRightBottom.y, point.y + 1 + 1), rightBottom.y );
 
-        area.leftTop.x = left        ;
-        area.leftTop.y = top         ;
-        area.size.cx   = right - left;
-        area.size.cy   = bottom - top;
+        auto left                  = area.leftTop    .x;
+        auto right                 = areaRightBottom .x;
+        Union(left, right, rect.leftTop.x, rightBottom.x, point.x);
+
+        auto top                   = area.leftTop   .y;
+        auto bottom                = areaRightBottom.y;
+        Union(top, bottom, rect.leftTop.y, rightBottom.y, point.y);
+
+        //const auto left            = std::max(std::min(area.leftTop.x   , point.x - 1    ), rect.leftTop.x);
+        //const auto top             = std::max(std::min(area.leftTop.y   , point.y - 1    ), rect.leftTop.y);
+        //const auto right           = std::min(std::max(areaRightBottom.x, point.x + 1 + 1), rightBottom.x );
+        //const auto bottom          = std::min(std::max(areaRightBottom.y, point.y + 1 + 1), rightBottom.y );
+
+        //area.leftTop.x = left         ;
+        //area.leftTop.y = top          ;
+        //area.size.cx   = right  - left;
+        //area.size.cy   = bottom - top ;
+
+#if defined(_DEBUG)
+        assert(point.x == rect.leftTop.x || point.x == rect.RightBottom().x - 1 || (left < point.x && point.x < right  - 1));
+        assert(point.y == rect.leftTop.y || point.y == rect.RightBottom().y - 1 || (top  < point.y && point.y < bottom - 1));
+
+        const auto result            = Rect(Point(left, top), Point(right, bottom));
+        const auto rectRightBottom   = rect  .RightBottom();
+        const auto resultRightBottom = result.RightBottom();
+        assert(point.x == rect.leftTop.x || point.x == rectRightBottom.x - 1 || (result.leftTop.x < point.x && point.x < resultRightBottom.x - 1));
+        assert(point.y == rect.leftTop.y || point.y == rectRightBottom.y - 1 || (result.leftTop.y < point.y && point.y < resultRightBottom.y - 1));
+#endif // _DEBUG
+
+        return Rect(Point(left, top), Point(right, bottom));
     }
 #endif // AREA
 
+#if !defined(AREA) || !defined(MT)
 protected:
+#endif // !AREA || !MT
     Rect GetRect() const
     { return Rect(Point(), size); }
 
 private:
+    static void Union(Integer& areaMinimum, Integer& areaMaximum, Integer minimum, Integer maximum, Integer value)
+    {
+        areaMinimum = std::max(std::min(areaMinimum, value - 1    ), minimum);
+        areaMaximum = std::min(std::max(areaMaximum, value + 1 + 1), maximum);
+#if defined(_DEBUG)
+        assert(value == minimum || value == maximum - 1 || areaMinimum < value && value < areaMaximum - 1);
+#endif // _DEBUG
+    }
+
     void Initialize()
     {
         InitializeUnitNumberX();
@@ -667,9 +792,13 @@ public:
     Size GetSize() const
     { return size; }
 
-    const Rect& GetArea() const
+    Rect GetArea() const
 #if defined(AREA)
     { return area; }
+#if defined(MT)
+    void SetArea(const Rect& newArea)
+    { area = newArea; }
+#endif // MT
 #else // AREA
     { return GetRect(); }
 #endif // AREA
@@ -694,7 +823,7 @@ public:
     /// <remarks>size.cx must be a multiple of 8.</remarks>
     Board(const Size& size) : size(size), bitCellSet(nullptr)
 #if defined(AREA)
-        , area{ Point(size.cx / 2, size.cy / 2), Size() }
+        , area(BitCellSet::GetDefaultArea(Rect(Point(), size)))
 #endif // AREA
     { Initialize(); }
 
@@ -722,7 +851,7 @@ public:
                 Set(point, pattern[patternIndex++]);
         }
 #else // FAST
-        Utility::ForEach(Rect{ startPoint, patternSize }, [&](const Point& point) { Set(point, pattern[patternIndex++]); });
+        Utility::ForEach(Rect(startPoint, patternSize), [&](const Point& point) { Set(point, pattern[patternIndex++]); });
 #endif // FAST
 
         return true;
@@ -732,9 +861,9 @@ public:
     void ForEach(std::function<void(const Point&)> action)
     {
 #if defined(AREA)
-        Utility::ForEach(GetRect(), action);
-#else // AREA
         Utility::ForEach(area, action);
+#else // AREA
+        Utility::ForEach(GetRect(), action);
 #endif // AREA
     }
 #endif // FAST
@@ -767,12 +896,15 @@ public:
 
     void Set(const Point& point, bool value)
     {
-        cells[point.y][point.x] = value;
+        SetOnly(point, value);
 #if defined(AREA)
         if (value)
-            BitCellSet::Union(area, GetRect(), point);
+            area = BitCellSet::Union(area, GetRect(), point);
 #endif // AREA
     }
+
+    void SetOnly(const Point& point, bool value)
+    { cells[point.y][point.x] = value; }
 
 private:
     void Initialize()
@@ -784,10 +916,14 @@ private:
         Clear();
     }
 
-    void Clear() const
+    void Clear()
     {
         for (auto y = 0; y < size.cy; y++)
             ::memset(cells[y], 0, sizeof(bool) * size.cx);
+
+#if defined(AREA)
+        area = Rect(Point(std::min(0, size.cx / 2 - 1), std::min(0, size.cy / 2 - 1)), Size(std::min(size.cx, 3), std::min(size.cy, 3)));
+#endif // AREA
     }
 
     Rect GetRect() const
@@ -828,9 +964,9 @@ public:
     void ForEach(std::function<void(const Point&)> action)
     {
 #if defined(AREA)
-        Utility::ForEach(GetRect(), action);
-#else // AREA
         Utility::ForEach(area, action);
+#else // AREA
+        Utility::ForEach(GetRect(), action);
 #endif // AREA
     }
 #endif // FAST
@@ -874,6 +1010,10 @@ class Game final
     unsigned long long generation;
     PatternSet         patternSet;
     int                patternIndex;
+#if defined(AREA) && defined(MT)
+    Rect*              areas    ;
+    const unsigned int hardwareConcurrency;
+#endif // AREA && MT
 
 public:
     const Board& GetBoard() const
@@ -889,10 +1029,16 @@ public:
     { return 0 <= patternIndex && patternIndex < patternSet.GetSize() ? patternSet[patternIndex].GetName() : _T(""); }
 
     Game(const Size& size) : mainBoard(new Board(size)), subBoard(new Board(size)), generation(0UL), patternIndex(-1)
+#if defined(AREA) && defined(MT)
+        , areas(nullptr), hardwareConcurrency(ThreadUtility::GetHardwareConcurrency())
+#endif // AREA && MT
     { Initialize(); }
 
     ~Game()
     {
+#if defined(AREA) && defined(MT)
+        delete[] areas;
+#endif // AREA && MT
         delete subBoard;
         delete mainBoard;
     }
@@ -910,9 +1056,22 @@ public:
         const auto area            = mainBoard->GetArea();
         const auto areaRightBottom = area.RightBottom();
 
+#if defined(AREA)
+        ResetAreas();
+
+        ThreadUtility::ForEach(area.leftTop.y, areaRightBottom.y, [=](Integer minimum, Integer maximum, unsigned int index) {
+            NextPart(Point(area.leftTop.x, minimum), Point(areaRightBottom.x, maximum), areas[index]);
+        });
+
+        const auto newArea = Rect::Union(areas, hardwareConcurrency);
+        subBoard->SetArea(newArea);
+
+#else // AREA
         ThreadUtility::ForEach(area.leftTop.y, areaRightBottom.y, [=](Integer minimum, Integer maximum) {
             NextPart(Point(area.leftTop.x, minimum), Point(areaRightBottom.x, maximum));
         });
+#endif // AREA
+
 #elif defined(FAST)
         //NextPart(Point(), Point() + mainBoard->GetSize());
         const auto area = mainBoard->GetArea();
@@ -924,6 +1083,10 @@ public:
             subBoard->Set(point, aliveNeighborCount == 3 || (aliveNeighborCount == 2 && alive));
         });
 #endif // FAST
+
+#if defined(_DEBUG)
+        Test(*mainBoard);
+#endif // _DEBUG
 
         std::swap(mainBoard, subBoard);
         generation++;
@@ -946,6 +1109,7 @@ public:
             return false;
         }
         mainBoard->Set(patternSet[index]);
+        subBoard ->Set(patternSet[index]);
         patternIndex = index;
         return true;
     }
@@ -966,9 +1130,37 @@ private:
             mainBoard->Set(point, random.Next() % 2 == 0);
         });
 #endif // FAST
+#if defined(AREA) && defined(MT)
+        delete[] areas;
+        areas = new Rect[hardwareConcurrency];
+        ResetAreas();
+#endif // AREA && MT
     }
 
-#if defined(FAST) || defined(MT)
+#if defined(AREA) && defined(MT)
+    void ResetAreas()
+    {
+        for (auto index = 0U; index < hardwareConcurrency; index++)
+            areas[index] = mainBoard->GetArea();
+    }
+#endif // AREA && MT
+
+#if defined(AREA) && defined(MT)
+    void NextPart(const Point& minimum, const Point& maximum, Rect& area)
+    {
+        Point point;
+        for (point.y = minimum.y; point.y < maximum.y; point.y++) {
+            for (point.x = minimum.x; point.x < maximum.x; point.x++) {
+                const auto aliveNeighborCount = mainBoard->GetAliveNeighborCount(point);
+                const auto alive              = aliveNeighborCount == 3 || (aliveNeighborCount == 2 && mainBoard->Get(point));
+                subBoard->SetOnly(point, alive);
+
+                if (alive)
+                    area = BitCellSet::Union(area, mainBoard->GetRect(), point);
+            }
+        }
+    }
+#elif defined(FAST) || defined(MT)
     void NextPart(const Point& minimum, const Point& maximum)
     {
         Point point;
@@ -980,6 +1172,24 @@ private:
         }
     }
 #endif // FAST
+
+#if defined(_DEBUG)
+    static void Test(const Board& board)
+    {
+        const auto size = board.GetSize();
+        const auto area = board.GetArea();
+        assert(area.size.cx > 0 && area.size.cy > 0);
+        assert(area.leftTop.x >= 0 && area.leftTop.y >= 0 && area.RightBottom().x <= size.cx && area.RightBottom().y <= size.cy);
+
+        for (auto y = 0; y < size.cy; y++) {
+            for (auto x = 0; x < size.cx; x++) {
+                if (!area.IsIn(Point(x, y)))
+                    assert(!board.Get(Point(x, y)));
+            }
+        }
+    }
+#endif // _DEBUG
+
 };
 
 } // namespace Shos::LifeGame
