@@ -926,6 +926,9 @@ private:
 #endif // AREA
     }
 
+#if defined(AREA)
+public:
+#endif // AREA
     Rect GetRect() const
     { return Rect(Point(), size); }
 };
