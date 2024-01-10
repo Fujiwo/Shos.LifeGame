@@ -1034,7 +1034,7 @@ public:
 #if defined(AREA) && defined(MT)
         , areas(nullptr), hardwareConcurrency(ThreadUtility::GetHardwareConcurrency())
 #endif // AREA && MT
-    { Initialize(); }
+    { Initialize(true); }
 
     ~Game()
     {
@@ -1094,11 +1094,12 @@ public:
         generation++;
     }
 
-    void Reset()
+    void Reset(bool randomize)
     {
-        Initialize();
-        generation   = 0UL;
-        patternIndex = -1;
+        Initialize(randomize);
+        generation = 0UL;
+        if (randomize)
+            patternIndex = -1;
     }
 
     //void Set(Pattern::Type patternType)
@@ -1117,9 +1118,20 @@ public:
     }
 
 private:
-    void Initialize()
+    void Initialize(bool randomize)
     {
-        //setlocale(LC_CTYPE, "");
+        if (randomize)
+            Randomize();
+
+#if defined(AREA) && defined(MT)
+        delete[] areas;
+        areas = new Rect[hardwareConcurrency];
+        ResetAreas();
+#endif // AREA && MT
+    }
+
+    void Randomize()
+    {
 #if defined(FAST)
         const auto size = mainBoard->GetSize();
         Point point;
@@ -1132,11 +1144,6 @@ private:
             mainBoard->Set(point, random.Next() % 2 == 0);
         });
 #endif // FAST
-#if defined(AREA) && defined(MT)
-        delete[] areas;
-        areas = new Rect[hardwareConcurrency];
-        ResetAreas();
-#endif // AREA && MT
     }
 
 #if defined(AREA) && defined(MT)

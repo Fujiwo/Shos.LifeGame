@@ -84,18 +84,13 @@ protected:
 #endif // TIMER
 
     virtual void OnChar(TCHAR character) override
-    {
-        //if (0 <= index && index < int(Pattern::Type::PatternCount))
-            //game.Set(static_cast<Pattern::Type>(KeyToNumber(key)));
-        if (!game.SetPattern(KeyToIndex(character)))
-            Reset();
-    }
+    { Reset(!game.SetPattern(KeyToIndex(character))); }
 
     virtual void OnRightButtonUp(const POINT& point) override
     {
         UNREFERENCED_PARAMETER(point);
 
-        Reset();
+        Reset(true);
     }
 
 private:
@@ -128,9 +123,9 @@ private:
         SetTitle();
     }
 
-    void Reset()
+    void Reset(bool randomize)
     {
-        game.Reset();
+        game.Reset(randomize);
         stopwatch.start();
     }
 
