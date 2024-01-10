@@ -38,7 +38,7 @@ class MainWindow final : public Window
     stopwatch stopwatch;
 
 public:
-    MainWindow() : game({ 800, 800 }), paintPosition({ 0, 0 }), renderingArea({ 0, 0, 0, 0 })
+    MainWindow() : game({ 1024, 1024 }), paintPosition({ 0, 0 }), renderingArea({ 0, 0, 0, 0 })
 #if defined(TIMER)
         , timer(nullptr)
 #endif // TIMER

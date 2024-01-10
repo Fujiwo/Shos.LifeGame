@@ -159,7 +159,16 @@
     <None Include="CellData\Wick_Ants.lif">
       <Filter>CellData</Filter>
     </None>
-    <None Include="CellData\R_Pentomino.lif">
+    <None Include="CellData\60P5H2V0.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\13_engine_Cordership.lif">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\OTCA_metapixel.rle">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\Eater1.rle">
       <Filter>CellData</Filter>
     </None>
   </ItemGroup>

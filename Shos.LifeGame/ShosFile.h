@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <sstream>
 #include <vector>
 
 #if defined(UNICODE) || defined(_UNICODE)
@@ -73,9 +74,29 @@ public:
     {
         const std::string TRIM_CHARACTERS = " ";
 
-        size_t start    = source.find_first_not_of(TRIM_CHARACTERS);
-        size_t end      = source.find_last_not_of (TRIM_CHARACTERS);
-        return source.substr(start, end - start + 1);
+        auto start    = source.find_first_not_of(TRIM_CHARACTERS);
+        auto end      = source.find_last_not_of (TRIM_CHARACTERS);
+        return start == tstring::npos || end == tstring::npos ? source
+                                                              : source.substr(start, end - start + 1);
+    }
+
+    static std::vector<std::string> Split(const std::string& text, char delimiter)
+    {
+        std::vector<std::string> tokens;
+        std::stringstream        stream(text);
+        std::string              token;
+        while (std::getline(stream, token, delimiter))
+           tokens.push_back(token);
+        return tokens;
+    }
+
+    static std::string ToLower(const std::string& text)
+    {
+        std::string result;
+
+        result.resize(text.size());
+        std::transform(text.begin(), text.end(), result.begin(), tolower);
+        return result;
     }
 };
 

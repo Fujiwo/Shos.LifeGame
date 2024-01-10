@@ -524,28 +524,39 @@ public:
 
 class PatternSet final
 {
-    std::vector<Pattern> paterns;
+    std::vector<Pattern> patterns;
 
 public:
     size_t GetSize() const
-    { return paterns.size(); }
+    { return patterns.size(); }
 
     PatternSet()
     {
         const auto folderName = _T(".\\CellData");
-        const auto extension  = ".lif";
-
+        const auto extension5  = ".lif";
+        ;
         std::vector<tstring> filePaths;
-        Shos::File::GetFilePaths(folderName, filePaths, extension);
+        Shos::File::GetFilePaths(folderName, filePaths, extension5);
 
-        Utility::Map<std::vector<tstring>, std::vector<Pattern>, tstring, Pattern>(filePaths, paterns, [&](tstring filePath) { return Read(filePath); });
+        std::vector<Pattern> patterns5;
+        Utility::Map<std::vector<tstring>, std::vector<Pattern>, tstring, Pattern>(filePaths, patterns5, [&](tstring filePath) { return Read(filePath); });
+
+        patterns.clear();
+        std::copy(patterns5.begin(), patterns5.end(), std::back_inserter(patterns));
+
+        const auto extensionRle = ".rle";
+        Shos::File::GetFilePaths(folderName, filePaths, extensionRle);
+
+        std::vector<Pattern> patternsRle;
+        Utility::Map<std::vector<tstring>, std::vector<Pattern>, tstring, Pattern>(filePaths, patternsRle, [&](tstring filePath) { return ReadRle(filePath); });
+        std::copy(patternsRle.begin(), patternsRle.end(), std::back_inserter(patterns));
     }
 
     const Pattern& operator[](size_t index) const
-    { return paterns[index]; }
+    { return patterns[index]; }
 
 private:
-    Pattern Read(tstring filePath)
+    static Pattern Read(tstring filePath)
     {
         std::vector<std::string> lines;
         Shos::File::Read(filePath, lines);
@@ -554,7 +565,7 @@ private:
         Utility::Map<std::vector<std::string>, std::vector<std::string>, std::string, std::string>(lines, trimedLines, [](std::string text) { return String::Trim(text); });
 
         std::vector<std::string> filteredLines;
-        Utility::Filter<std::vector<std::string>, std::string>(trimedLines, filteredLines, [](const std::string& text) { return !text.empty() && !text.starts_with('#'); });
+        Utility::Filter<std::vector<std::string>, std::string>(trimedLines, filteredLines, [](const std::string& text) { return !text.starts_with('#'); });
 
         if (filteredLines.size() == 0)
             return Pattern(_T(""), "", 0U);
@@ -569,7 +580,126 @@ private:
         return Pattern(Shos::File::GetStem(filePath), pattern, width);
     }
 
-    std::string Adjust(std::string text, UnsignedInteger width)
+    static Pattern ReadRle(tstring filePath)
+    {
+        std::vector<std::string> lines;
+        Shos::File::Read(filePath, lines);
+
+        std::vector<std::string> trimedLines;
+        Utility::Map<std::vector<std::string>, std::vector<std::string>, std::string, std::string>(lines, trimedLines, [](std::string text) { return String::Trim(text); });
+
+        std::vector<std::string> filteredLines;
+        Utility::Filter<std::vector<std::string>, std::string>(trimedLines, filteredLines, [](const std::string& text) { return !text.empty() && !text.starts_with('#'); });
+
+        if (filteredLines.size() == 0)
+            return Pattern(_T(""), "", 0U);
+
+        const auto rule = filteredLines[0];
+        auto [width, height] = GetRleSize(rule);
+
+        std::vector<std::string> patternLines { filteredLines.begin() + 1, filteredLines.end() };
+        //std::vector<std::string> patternLines;
+        //std::copy(filteredLines.begin() + 1, filteredLines.end(), patternLines.begin());
+        ////{ &filteredLines[1], filteredLines.end() };
+
+        std::string pattern = Utility::Connect(patternLines);
+        pattern = RleToPattern(pattern, width, height);
+
+        return Pattern(Shos::File::GetStem(filePath), pattern, width);
+
+        //const auto width = Utility::Maximum<std::vector<std::string>, std::string, UnsignedInteger>(filteredLines, [](const std::string& text) { return UnsignedInteger(text.length()); });
+
+        //std::vector<std::string> ajustedLines;
+        //Utility::Map<std::vector<std::string>, std::vector<std::string>, std::string, std::string>(filteredLines, ajustedLines, [&](std::string text) { return Adjust(text, width); });
+
+        //std::string pattern = Utility::Connect(ajustedLines);
+
+        //return Pattern(Shos::File::GetStem(filePath), pattern, width);
+    }
+
+    static std::string RleToPattern(std::string rlePattern, UnsignedInteger width, UnsignedInteger height)
+    {
+        std::string pattern    ;
+        std::string partPattern;
+        size_t      count = 0U;
+        for (size_t index = 0U; index < rlePattern.length(); index++) {
+            const auto  character = std::tolower(rlePattern[index]);
+            if (std::isdigit(character)) {
+                count = GetRleCount(rlePattern, index);
+            } else {
+                switch (character) {
+                    case 'b':
+                        partPattern.append(count == 0U ? 1U : count, '.');
+                        break;
+                    case 'o':
+                        partPattern.append(count == 0U ? 1U : count, '*');
+                        break;
+                    case '$':
+                        AppendPartPattern(partPattern, width, pattern);
+                        partPattern.clear();
+                        break;
+                    case '!':
+                        AppendPartPattern(partPattern, width, pattern);
+                        return pattern;
+                }
+                count = 0U;
+            }
+        }
+        return pattern;
+    }
+
+    static void AppendPartPattern(std::string& partPattern, UnsignedInteger width, std::string& pattern)
+    {
+        if      (partPattern.length() < width)
+            pattern.append(Adjust(partPattern, width));
+        else if (partPattern.length() > width)
+            pattern.append(partPattern.substr(0, width));
+        else
+            pattern.append(partPattern);
+    }
+
+    static size_t GetRleCount(std::string rlePattern, size_t& index)
+    {
+        size_t count  = 0U;
+        size_t number = 0U;
+        for (; index < rlePattern.length(); number++) {
+            const auto character = rlePattern[index + number];
+            if (std::isdigit(character)) {
+                count *= 10;
+                count += character - '0';
+            } else {
+                break;
+            }
+        }
+        if (number > 0U)
+            index += number - 1;
+        return count;
+    }
+
+    static std::tuple<UnsignedInteger, UnsignedInteger> GetRleSize(std::string rule)
+    {
+        rule.erase(std::remove_if(rule.begin(), rule.end(), ::isspace), rule.end());
+
+        const auto tokens = String::Split(rule, ',');
+        std::vector<std::string> trimedTokens;
+
+        UnsignedInteger width  = 0U;
+        UnsignedInteger height = 0U;
+
+        try {
+            for (const auto& token : tokens) {
+                const auto lowerToken = String::ToLower(token);
+                if      (lowerToken.starts_with("x="))
+                    width  = std::stoi(token.substr(2));
+                else if (lowerToken.starts_with("y="))
+                    height = std::stoi(token.substr(2));
+            }
+        } catch (const std::exception&) {
+        }
+        return { width, height };
+    }
+
+    static std::string Adjust(std::string text, UnsignedInteger width)
     {
         if (text.length() < width)
             text.append(width - text.length(), '.');
