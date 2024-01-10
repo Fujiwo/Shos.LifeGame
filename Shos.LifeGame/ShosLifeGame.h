@@ -1,8 +1,8 @@
 #pragma once
 
+//#define USEBOOL // Boolean enabled
 #define FAST    // Fast loops enabled
 #define MT      // Multi-threading enabled
-//#define USEBOOL // Boolean enabled
 #define AREA    // Area enabled
 
 #include <string>
@@ -684,8 +684,8 @@ public:
     //}
 
 #if !defined(FAST)
-    void ForEach(std::function<void(const Point&)> action)
-    { Utility::ForEach(GetRect(), action); }
+    void ForEach(std::function<void(const Point&)> action, bool areaOnly)
+    { Utility::ForEach(areaOnly ? GetArea() : GetRect(), action); }
 #endif // FAST
 
 #if defined(AREA)
@@ -857,13 +857,17 @@ public:
     }
 
 #if !defined(FAST)
-    void ForEach(std::function<void(const Point&)> action)
-    {
+    void ForEach(std::function<void(const Point&)> action
 #if defined(AREA)
-        Utility::ForEach(area, action);
-#else // AREA
-        Utility::ForEach(GetRect(), action);
+                 , bool areaOnly
 #endif // AREA
+    )
+    {
+        Utility::ForEach(
+#if defined(AREA)
+            areaOnly ? area :
+#endif // AREA
+            GetRect(), action);
     }
 #endif // FAST
 
@@ -963,15 +967,15 @@ public:
     }
 
 #if !defined(FAST)
-    void ForEach(std::function<void(const Point&)> action)
+    void ForEach(std::function<void(const Point&)> action, bool areaOnly)
     {
 #if defined(AREA)
-        Utility::ForEach(area, action);
+        Utility::ForEach(areaOnly ? GetArea() : GetRect(), action);
 #else // AREA
         Utility::ForEach(GetRect(), action);
 #endif // AREA
     }
-#endif // FAST
+#endif !FAST
 
     UnsignedInteger GetAliveNeighborCount(const Point& point) const
     {
@@ -1142,7 +1146,7 @@ private:
 #else // FAST
         mainBoard->ForEach([&](const Point& point) {
             mainBoard->Set(point, random.Next() % 2 == 0);
-        });
+        }, false);
 #endif // FAST
     }
 

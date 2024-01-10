@@ -159,5 +159,8 @@
     <None Include="CellData\Wick_Ants.lif">
       <Filter>CellData</Filter>
     </None>
+    <None Include="CellData\R_Pentomino.lif">
+      <Filter>CellData</Filter>
+    </None>
   </ItemGroup>
 </Project>
