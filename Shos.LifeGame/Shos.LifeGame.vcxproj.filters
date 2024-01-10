@@ -171,5 +171,11 @@
     <None Include="CellData\Eater1.rle">
       <Filter>CellData</Filter>
     </None>
+    <None Include="CellData\52513m.rle">
+      <Filter>CellData</Filter>
+    </None>
+    <None Include="CellData\wilma.rle">
+      <Filter>CellData</Filter>
+    </None>
   </ItemGroup>
 </Project>
