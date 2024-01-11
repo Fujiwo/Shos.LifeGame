@@ -14,6 +14,58 @@
 
 namespace Shos {
 
+class Helper final
+{
+public:
+    template <typename TCollection, typename TElement>
+    static void ForEach(const TCollection& collection, std::function<void(const TElement&)> action)
+    {
+        for (const auto& element : collection)
+            action(element);
+    }
+
+    template <typename TSourceCollection, typename TDestinationCollection, typename TSourceElement, typename TDestinationElement>
+    static void Map(const TSourceCollection& source, TDestinationCollection& destination, std::function<TDestinationElement(const TSourceElement&)> map)
+    {
+        destination.clear();
+        for (const auto& element : source)
+            destination.push_back(map(element));
+    }
+
+    template <typename TCollection, typename TElement>
+    static void Filter(const TCollection& source, TCollection& destination, std::function<bool(const TElement&)> isMatch)
+    {
+        destination.clear();
+        for (const auto& element : source) {
+            if (isMatch(element))
+                destination.push_back(element);
+        }
+    }
+
+    template <typename TCollection, typename TElement, typename TSizeType = size_t>
+    static TSizeType Maximum(const TCollection& collection, std::function<TSizeType(const TElement&)> getValue)
+    {
+        assert(collection.size() > 0);
+
+        std::vector<TSizeType> values;
+        Map<TCollection, std::vector<TSizeType>, TElement, TSizeType>(collection, values, getValue);
+        auto iterator = std::max_element(values.begin(), values.end());
+        return *iterator;
+    }
+
+    template <typename TCollection>
+    static void Connect(TCollection& target, const TCollection& collection)
+    { std::copy(collection.begin(), collection.end(), std::back_inserter(target)); }
+
+    template <typename TCollection>
+    static std::string Connect(const TCollection& texts)
+    {
+        std::ostringstream stream;
+        ForEach<TCollection, std::string>(texts, [&](const std::string& text) { stream << text; });
+        return stream.str();
+    }
+};
+
 class File final
 {
 public:

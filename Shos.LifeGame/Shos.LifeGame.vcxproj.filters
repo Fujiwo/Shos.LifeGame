@@ -34,7 +34,7 @@
     <ClInclude Include="ShosStopwatch.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="ShosFile.h">
+    <ClInclude Include="ShosHelper.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>

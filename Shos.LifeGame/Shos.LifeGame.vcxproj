@@ -144,7 +144,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ShosDebug.h" />
-    <ClInclude Include="ShosFile.h" />
+    <ClInclude Include="ShosHelper.h" />
     <ClInclude Include="ShosLifeGame.h" />
     <ClInclude Include="ShosLifeGameBoardPainter.h" />
     <ClInclude Include="ShosStopwatch.h" />

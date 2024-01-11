@@ -19,7 +19,7 @@
 #include <cstring>
 #include <cassert>
 #include <tchar.h>
-#include "ShosFile.h"
+#include "ShosHelper.h"
 #if defined(_DEBUG)
 #include "ShosDebug.h"
 #endif // _DEBUG
@@ -133,10 +133,10 @@ private:
     { return minimum <= value && value < minimum + size; }
 };
 
+#if !defined(FAST)
 class Utility final
 {
 public:
-#if !defined(FAST)
     static UnsignedInteger Count(const Rect& rect, std::function<bool(const Point&)> isMatch)
     {
         UnsignedInteger count = 0;
@@ -156,56 +156,8 @@ public:
                 action(index);
         }
     }
-#endif // FAST
-
-    template <typename TCollection, typename TElement>
-    static void ForEach(const TCollection& collection, std::function<void(const TElement&)> action)
-    {
-        for (const auto& element : collection)
-            action(element);
-    }
-
-    template <typename TSourceCollection, typename TDestinationCollection, typename TSourceElement, typename TDestinationElement>
-    static void Map(const TSourceCollection& source, TDestinationCollection& destination, std::function<TDestinationElement(const TSourceElement&)> map)
-    {
-        destination.clear();
-        for (const auto& element : source)
-            destination.push_back(map(element));
-    }
-
-    template <typename TCollection, typename TElement>
-    static void Filter(const TCollection& source, TCollection& destination, std::function<bool(const TElement&)> isMatch)
-    {
-        destination.clear();
-        for (const auto& element : source) {
-            if (isMatch(element))
-                destination.push_back(element);
-        }
-    }
-
-    template <typename TCollection, typename TElement, typename TSizeType = size_t>
-    static TSizeType Maximum(const TCollection& collection, std::function<TSizeType(const TElement&)> getValue)
-    {
-        assert(collection.size() > 0);
-
-        std::vector<TSizeType> values;
-        Map<TCollection, std::vector<TSizeType>, TElement, TSizeType>(collection, values, getValue);
-        auto iterator = std::max_element(values.begin(), values.end());
-        return *iterator;
-    }
-
-    template <typename TCollection>
-    static void Connect(TCollection& target, const TCollection& collection)
-    { std::copy(collection.begin(), collection.end(), std::back_inserter(target)); }
-
-    template <typename TCollection>
-    static std::string Connect(const TCollection& texts)
-    {
-        std::ostringstream stream;
-        ForEach<TCollection, std::string>(texts, [&](const std::string& text) { stream << text; });
-        return stream.str();
-    }
 };
+#endif // FAST
 
 #if defined(MT)
 class ThreadUtility final
@@ -306,11 +258,11 @@ public:
 
         std::vector<Pattern> patterns5;
         Pattern5::ReadFromFolder(folderName, patterns5);
-        Utility::Connect<std::vector<Pattern>>(patterns, patterns5);
+        Helper::Connect<std::vector<Pattern>>(patterns, patterns5);
 
         std::vector<Pattern> patternsRle;
         RlePattern::ReadFromFolder(folderName, patternsRle);
-        Utility::Connect<std::vector<Pattern>>(patterns, patternsRle);
+        Helper::Connect<std::vector<Pattern>>(patterns, patternsRle);
     }
 
 private:
@@ -325,7 +277,7 @@ private:
             std::vector<tstring> filePaths;
             Shos::File::GetFilePaths(folderName, filePaths, extension5);
 
-            Utility::Map<std::vector<tstring>, std::vector<Pattern>, tstring, Pattern>(filePaths, patterns, [&](tstring filePath) { return Read(filePath); });
+            Helper::Map<std::vector<tstring>, std::vector<Pattern>, tstring, Pattern>(filePaths, patterns, [&](tstring filePath) { return Read(filePath); });
         }
 
         static std::string Adjust(std::string text, size_t width)
@@ -341,20 +293,20 @@ private:
             Shos::File::Read(filePath, lines);
 
             std::vector<std::string> trimedLines;
-            Utility::Map<std::vector<std::string>, std::vector<std::string>, std::string, std::string>(lines, trimedLines, [](std::string text) { return String::Trim(text); });
+            Helper::Map<std::vector<std::string>, std::vector<std::string>, std::string, std::string>(lines, trimedLines, [](std::string text) { return String::Trim(text); });
 
             std::vector<std::string> filteredLines;
-            Utility::Filter<std::vector<std::string>, std::string>(trimedLines, filteredLines, [](const std::string& text) { return !text.starts_with('#'); });
+            Helper::Filter<std::vector<std::string>, std::string>(trimedLines, filteredLines, [](const std::string& text) { return !text.starts_with('#'); });
 
             if (filteredLines.size() == 0)
                 return Pattern(_T(""), "", 0U);
 
-            const auto width = Utility::Maximum<std::vector<std::string>, std::string, UnsignedInteger>(filteredLines, [](const std::string& text) { return UnsignedInteger(text.length()); });
+            const auto width = Helper::Maximum<std::vector<std::string>, std::string, UnsignedInteger>(filteredLines, [](const std::string& text) { return UnsignedInteger(text.length()); });
 
             std::vector<std::string> ajustedLines;
-            Utility::Map<std::vector<std::string>, std::vector<std::string>, std::string, std::string>(filteredLines, ajustedLines, [&](std::string text) { return Adjust(text, width); });
+            Helper::Map<std::vector<std::string>, std::vector<std::string>, std::string, std::string>(filteredLines, ajustedLines, [&](std::string text) { return Adjust(text, width); });
 
-            std::string pattern = Utility::Connect(ajustedLines);
+            std::string pattern = Helper::Connect(ajustedLines);
 
             return Pattern(Shos::File::GetStem(filePath), pattern, width);
         }
@@ -371,7 +323,7 @@ private:
             std::vector<tstring> filePaths;
             Shos::File::GetFilePaths(folderName, filePaths, extensionRle);
 
-            Utility::Map<std::vector<tstring>, std::vector<Pattern>, tstring, Pattern>(filePaths, patterns, [&](tstring filePath) { return Read(filePath); });
+            Helper::Map<std::vector<tstring>, std::vector<Pattern>, tstring, Pattern>(filePaths, patterns, [&](tstring filePath) { return Read(filePath); });
         }
 
     private:
@@ -381,10 +333,10 @@ private:
             Shos::File::Read(filePath, lines);
 
             std::vector<std::string> trimedLines;
-            Utility::Map<std::vector<std::string>, std::vector<std::string>, std::string, std::string>(lines, trimedLines, [](std::string text) { return String::Trim(text); });
+            Helper::Map<std::vector<std::string>, std::vector<std::string>, std::string, std::string>(lines, trimedLines, [](std::string text) { return String::Trim(text); });
 
             std::vector<std::string> filteredLines;
-            Utility::Filter<std::vector<std::string>, std::string>(trimedLines, filteredLines, [](const std::string& text) { return !text.empty() && !text.starts_with('#'); });
+            Helper::Filter<std::vector<std::string>, std::string>(trimedLines, filteredLines, [](const std::string& text) { return !text.empty() && !text.starts_with('#'); });
 
             if (filteredLines.size() == 0)
                 return Pattern(_T(""), "", 0U);
@@ -394,7 +346,7 @@ private:
 
             std::vector<std::string> patternLines{ filteredLines.begin() + 1, filteredLines.end() };
 
-            std::string pattern = Utility::Connect(patternLines);
+            std::string pattern = Helper::Connect(patternLines);
             pattern = RleToPattern(pattern, width, height);
 
             return Pattern(Shos::File::GetStem(filePath), pattern, width);
@@ -609,16 +561,6 @@ public:
         auto bottom                = areaRightBottom.y;
         Union(top, bottom, rect.leftTop.y, rightBottom.y, point.y);
 
-        //const auto left            = std::max(std::min(area.leftTop.x   , point.x - 1    ), rect.leftTop.x);
-        //const auto top             = std::max(std::min(area.leftTop.y   , point.y - 1    ), rect.leftTop.y);
-        //const auto right           = std::min(std::max(areaRightBottom.x, point.x + 1 + 1), rightBottom.x );
-        //const auto bottom          = std::min(std::max(areaRightBottom.y, point.y + 1 + 1), rightBottom.y );
-
-        //area.leftTop.x = left         ;
-        //area.leftTop.y = top          ;
-        //area.size.cx   = right  - left;
-        //area.size.cy   = bottom - top ;
-
 #if defined(_DEBUG)
         assert(point.x == rect.leftTop.x || point.x == rect.RightBottom().x - 1 || (left < point.x && point.x < right  - 1));
         assert(point.y == rect.leftTop.y || point.y == rect.RightBottom().y - 1 || (top  < point.y && point.y < bottom - 1));
@@ -766,7 +708,7 @@ public:
 #if !defined(FAST)
     void ForEach(std::function<void(const Point&)> action
 #if defined(AREA)
-                 , bool areaOnly
+                 , bool areaOnly = false
 #endif // AREA
     )
     {
@@ -874,7 +816,7 @@ public:
     }
 
 #if !defined(FAST)
-    void ForEach(std::function<void(const Point&)> action, bool areaOnly)
+    void ForEach(std::function<void(const Point&)> action, bool areaOnly = false)
     {
 #if defined(AREA)
         Utility::ForEach(areaOnly ? GetArea() : GetRect(), action);
@@ -1013,9 +955,6 @@ public:
             patternIndex = -1;
     }
 
-    //void Set(Pattern::Type patternType)
-    //{ mainBoard->Set(Pattern::Create(patternType)); }
-
     bool SetPattern(int index)
     {
         if (index < 0 || patternSet.GetSize() <= index) {
@@ -1053,7 +992,7 @@ private:
 #else // FAST
         mainBoard->ForEach([&](const Point& point) {
             mainBoard->Set(point, random.Next() % 2 == 0);
-        }, false);
+        });
 #endif // FAST
     }
 

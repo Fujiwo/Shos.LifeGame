@@ -54,9 +54,6 @@ public:
 
     void Invalidate(const RECT& rect) const
     { ::InvalidateRect(handle, &rect, FALSE); }
-
-    //void Invalidate() const
-    //{ ::InvalidateRect(handle, nullptr, FALSE); }
     
     RECT GetClientRect() const
     {
@@ -104,11 +101,6 @@ protected:
         UNREFERENCED_PARAMETER(timerId);
     }
 #endif // TIMER
-
-    //virtual void OnKeyDown(int key)
-    //{
-    //    UNREFERENCED_PARAMETER(key);
-    //}
 
     virtual void OnChar(TCHAR character)
     {
@@ -162,11 +154,6 @@ private:
                 GetSelf(windowHandle)->OnTimer(int(wParam));
                 break;
 #endif // TIMER
-            //case WM_KEYDOWN: {
-            //        const auto key = int(wParam);
-            //        GetSelf(windowHandle)->OnKeyDown(key);
-            //    }
-            //    break;
             case WM_CHAR: {
                     const auto character = TCHAR(wParam);
                     GetSelf(windowHandle)->OnChar(character);
