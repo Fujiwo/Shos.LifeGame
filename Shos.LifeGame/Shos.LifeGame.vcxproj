@@ -112,7 +112,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>robocopy "$(ProjectDir)\CellData" "$(OutDir)\CellData" *.lif /mir</Command>
+      <Command>robocopy "$(ProjectDir)\CellData" "$(OutDir)\CellData" *.* /mir</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -136,7 +136,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>robocopy "$(ProjectDir)\CellData" "$(OutDir)\CellData" *.lif /mir</Command>
+      <Command>robocopy "$(ProjectDir)\CellData" "$(OutDir)\CellData" *.* /mir</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
