@@ -8,6 +8,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documents", "Documents", "{BB382EC3-003C-49B7-B050-5155E5725187}"
 	ProjectSection(SolutionItems) = preProject
 		LICENSE.txt = LICENSE.txt
+		Images\lifegame01.png = Images\lifegame01.png
 		README.md = README.md
 	EndProjectSection
 EndProject
