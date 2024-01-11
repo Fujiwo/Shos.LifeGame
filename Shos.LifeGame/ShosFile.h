@@ -80,6 +80,13 @@ public:
                                                               : source.substr(start, end - start + 1);
     }
 
+    static std::string Adjust(std::string text, char character, size_t width)
+    {
+        if (text.length() < width)
+            text.append(width - text.length(), character);
+        return text;
+    }
+
     static std::vector<std::string> Split(const std::string& text, char delimiter)
     {
         std::vector<std::string> tokens;

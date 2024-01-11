@@ -194,6 +194,9 @@ public:
         return *iterator;
     }
 
+    template <typename TCollection>
+    static void Connect(TCollection& target, const TCollection& collection)
+    { std::copy(collection.begin(), collection.end(), std::back_inserter(target)); }
 
     template <typename TCollection>
     static std::string Connect(const TCollection& texts)
@@ -259,241 +262,12 @@ private:
 
 class Pattern final
 {
-//public:
-//    enum class Type
-//    {
-//        Glider               ,
-//        LightweightSpaceship ,
-//        MiddleweightSpaceship,
-//        HeavyweightSpaceship ,
-//        Rpentomino           ,
-//        GosperGliderGun      ,
-//        SimkinGliderGun      ,
-//        SwitchEngine         ,
-//        PufferTrain          ,
-//        Max                  ,
-//        PatternCount
-//    };
-
-private:
     const char            alive = '*';
     const tstring         name;
     const std::string     pattern;
     const UnsignedInteger width;
 
 public:
-    //static Pattern Create(Type type)
-    //{
-    //    switch (type) {
-    //    case Type::Glider:
-    //        return Pattern(
-    //            _T("Glider"),
-    //            "***"
-    //            "*.."
-    //            ".*."
-    //        , 3U);
-    //    case Type::LightweightSpaceship:
-    //        return Pattern(
-    //            _T("LightweightSpaceship"),
-    //            ".*..*"
-    //            "*...."
-    //            "*...*"
-    //            "****."
-    //        , 5U);
-    //    case Type::MiddleweightSpaceship:
-    //        return Pattern(
-    //            _T("MiddleweightSpaceship"),
-    //            "...*.."
-    //            ".*...*"
-    //            "*....."
-    //            "*....*"
-    //            "*****."
-    //        , 6U);
-    //    case Type::HeavyweightSpaceship:
-    //        return Pattern(
-    //            _T("HeavyweightSpaceship"),
-    //            "...**.."
-    //            ".*....*"
-    //            "*......"
-    //            "*.....*"
-    //            "******."
-    //        , 7U);
-    //    case Type::Rpentomino:
-    //        return Pattern(
-    //            _T("Rpentomino"),
-    //            ".**"
-    //            "**."
-    //            ".*."
-    //        , 3U);
-    //    case Type::GosperGliderGun:
-    //        return Pattern(
-    //            _T("GosperGliderGun"),
-    //            "........................*..........."
-    //            "......................*.*..........."
-    //            "............**......**............**"
-    //            "...........*...*....**............**"
-    //            "**........*.....*...**.............."
-    //            "**........*...*.**....*.*..........."
-    //            "..........*.....*.......*..........."
-    //            "...........*...*...................."
-    //            "............**......................"
-    //        , 36U);
-    //    case Type::SimkinGliderGun:
-    //        return Pattern(
-    //            _T("SimkinGliderGun"),
-    //            "**.....**........................"
-    //            "**.....**........................"
-    //            "................................."
-    //            "....**..........................."
-    //            "....**..........................."
-    //            "................................."
-    //            "................................."
-    //            "................................."
-    //            "................................."
-    //            "......................**.**......"
-    //            ".....................*.....*....."
-    //            ".....................*......*..**"
-    //            ".....................***...*...**"
-    //            "..........................*......"
-    //            "................................."
-    //            "................................."
-    //            "................................."
-    //            "....................**..........."
-    //            "....................*............"
-    //            ".....................***........."
-    //            ".......................*........."
-    //            , 33U);
-    //    case Type::SwitchEngine:
-    //        return Pattern(
-    //            _T("SwitchEngine"),
-    //            "***............................................"
-    //            "*.*............................................"
-    //            "***............................................"
-    //            "*.*............................................"
-    //            "***............................................"
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "***..................*..................**....."
-    //            ".*..*................*..*.................*...."
-    //            ".....*..............*.*.*.................*...."
-    //            "..*.*......................................****"
-    //            "........................**....................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "***............................................"
-    //            "*.*............................................"
-    //            "***............................................"
-    //            "..*............................................"
-    //            "..*............................................"
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "..............................................."
-    //            "**..................*.....................*...."
-    //            "....................**..................*......"
-    //            ".*.......................................*....."
-    //            "..**.*.*.............***.................*....."
-    //            "........................*......................"
-    //            "....*.*...............**................*.***.."
-    //            "..............................................."
-    //            "...........................................*..."
-    //        , 47U);
-    //    case Type::PufferTrain:
-    //        return Pattern(
-    //            _T("PufferTrain"),
-    //            "...*."
-    //            "....*"
-    //            "*...*"
-    //            ".****"
-    //            "....."
-    //            "....."
-    //            "....."
-    //            "*...."
-    //            ".**.."
-    //            "..*.."
-    //            "..*.."
-    //            ".*..."
-    //            "....."
-    //            "....."
-    //            "...*."
-    //            "....*"
-    //            "*...*"
-    //            ".****"
-    //            , 5U);
-    //    case Type::Max:
-    //        return Pattern(
-    //            _T("Max"),
-    //            "..................*........"
-    //            ".................***......."
-    //            "............***....**......"
-    //            "...........*..***..*.**...."
-    //            "..........*...*.*..*.*....."
-    //            "..........*....*.*.*.*.**.."
-    //            "............*....*.*...**.."
-    //            "****.....*.*....*...*.***.."
-    //            "*...**.*.***.**.........**."
-    //            "*.....**.....*............."
-    //            ".*..**.*..*..*.**.........."
-    //            ".......*.*.*.*.*.*.....****"
-    //            ".*..**.*..*..*..**.*.**...*"
-    //            "*.....**...*.*.*...**.....*"
-    //            "*...**.*.**..*..*..*.**..*."
-    //            "****.....*.*.*.*.*.*......."
-    //            "..........**.*..*..*.**..*."
-    //            ".............*.....**.....*"
-    //            ".**.........**.***.*.**...*"
-    //            "..***.*...*....*.*.....****"
-    //            "..**...*.*....*............"
-    //            "..**.*.*.*.*....*.........."
-    //            ".....*.*..*.*...*.........."
-    //            "....**.*..***..*..........."
-    //            "......**....***............"
-    //            ".......***................."
-    //            "........*.................."
-    //            , 27U);
-    //    default:
-    //        assert(false);
-    //        return Pattern(_T(""), "", 0U);
-    //    }   
-    //}
-
     Size GetSize() const
     {
         if (width == 0)
@@ -513,13 +287,6 @@ public:
 
     bool operator[](size_t index) const
     { return pattern[index] == alive; }
-
-//    bool operator[](const Point& point) const
-//    { return operator[](ToIndex(point)); }
-//
-//private:
-//    size_t ToIndex(const Point& point) const
-//    { return width * point.y + point.x; }
 };
 
 class PatternSet final
@@ -530,104 +297,120 @@ public:
     size_t GetSize() const
     { return patterns.size(); }
 
-    PatternSet()
-    {
-        const auto folderName = _T(".\\CellData");
-        const auto extension5  = ".lif";
-        ;
-        std::vector<tstring> filePaths;
-        Shos::File::GetFilePaths(folderName, filePaths, extension5);
-
-        std::vector<Pattern> patterns5;
-        Utility::Map<std::vector<tstring>, std::vector<Pattern>, tstring, Pattern>(filePaths, patterns5, [&](tstring filePath) { return Read(filePath); });
-
-        patterns.clear();
-        std::copy(patterns5.begin(), patterns5.end(), std::back_inserter(patterns));
-
-        const auto extensionRle = ".rle";
-        Shos::File::GetFilePaths(folderName, filePaths, extensionRle);
-
-        std::vector<Pattern> patternsRle;
-        Utility::Map<std::vector<tstring>, std::vector<Pattern>, tstring, Pattern>(filePaths, patternsRle, [&](tstring filePath) { return ReadRle(filePath); });
-        std::copy(patternsRle.begin(), patternsRle.end(), std::back_inserter(patterns));
-    }
-
     const Pattern& operator[](size_t index) const
     { return patterns[index]; }
 
+    PatternSet()
+    {
+        const auto folderName = _T(".\\CellData");
+
+        std::vector<Pattern> patterns5;
+        Pattern5::ReadFromFolder(folderName, patterns5);
+        Utility::Connect<std::vector<Pattern>>(patterns, patterns5);
+
+        std::vector<Pattern> patternsRle;
+        RlePattern::ReadFromFolder(folderName, patternsRle);
+        Utility::Connect<std::vector<Pattern>>(patterns, patternsRle);
+    }
+
 private:
-    static Pattern Read(tstring filePath)
+    class Pattern5 final
     {
-        std::vector<std::string> lines;
-        Shos::File::Read(filePath, lines);
+    public:
+        static void ReadFromFolder(tstring folderName, std::vector<Pattern>& patterns)
+        {
+            patterns.clear();
 
-        std::vector<std::string> trimedLines;
-        Utility::Map<std::vector<std::string>, std::vector<std::string>, std::string, std::string>(lines, trimedLines, [](std::string text) { return String::Trim(text); });
+            const auto           extension5 = ".lif";
+            std::vector<tstring> filePaths;
+            Shos::File::GetFilePaths(folderName, filePaths, extension5);
 
-        std::vector<std::string> filteredLines;
-        Utility::Filter<std::vector<std::string>, std::string>(trimedLines, filteredLines, [](const std::string& text) { return !text.starts_with('#'); });
+            Utility::Map<std::vector<tstring>, std::vector<Pattern>, tstring, Pattern>(filePaths, patterns, [&](tstring filePath) { return Read(filePath); });
+        }
 
-        if (filteredLines.size() == 0)
-            return Pattern(_T(""), "", 0U);
+        static std::string Adjust(std::string text, size_t width)
+        {
+            const auto character = '.';
+            return String::Adjust(text, character, width);
+        }
 
-        const auto width    = Utility::Maximum<std::vector<std::string>, std::string, UnsignedInteger>(filteredLines, [](const std::string& text) { return UnsignedInteger(text.length()); });
+    private:
+        static Pattern Read(tstring filePath)
+        {
+            std::vector<std::string> lines;
+            Shos::File::Read(filePath, lines);
 
-        std::vector<std::string> ajustedLines;
-        Utility::Map<std::vector<std::string>, std::vector<std::string>, std::string, std::string>(filteredLines, ajustedLines, [&](std::string text) { return Adjust(text, width); });
+            std::vector<std::string> trimedLines;
+            Utility::Map<std::vector<std::string>, std::vector<std::string>, std::string, std::string>(lines, trimedLines, [](std::string text) { return String::Trim(text); });
 
-        std::string pattern = Utility::Connect(ajustedLines);
+            std::vector<std::string> filteredLines;
+            Utility::Filter<std::vector<std::string>, std::string>(trimedLines, filteredLines, [](const std::string& text) { return !text.starts_with('#'); });
 
-        return Pattern(Shos::File::GetStem(filePath), pattern, width);
-    }
+            if (filteredLines.size() == 0)
+                return Pattern(_T(""), "", 0U);
 
-    static Pattern ReadRle(tstring filePath)
+            const auto width = Utility::Maximum<std::vector<std::string>, std::string, UnsignedInteger>(filteredLines, [](const std::string& text) { return UnsignedInteger(text.length()); });
+
+            std::vector<std::string> ajustedLines;
+            Utility::Map<std::vector<std::string>, std::vector<std::string>, std::string, std::string>(filteredLines, ajustedLines, [&](std::string text) { return Adjust(text, width); });
+
+            std::string pattern = Utility::Connect(ajustedLines);
+
+            return Pattern(Shos::File::GetStem(filePath), pattern, width);
+        }
+    };
+
+    class RlePattern final
     {
-        std::vector<std::string> lines;
-        Shos::File::Read(filePath, lines);
+    public:
+        static void ReadFromFolder(tstring folderName, std::vector<Pattern>& patterns)
+        {
+            patterns.clear();
 
-        std::vector<std::string> trimedLines;
-        Utility::Map<std::vector<std::string>, std::vector<std::string>, std::string, std::string>(lines, trimedLines, [](std::string text) { return String::Trim(text); });
+            const auto           extensionRle = ".rle";
+            std::vector<tstring> filePaths;
+            Shos::File::GetFilePaths(folderName, filePaths, extensionRle);
 
-        std::vector<std::string> filteredLines;
-        Utility::Filter<std::vector<std::string>, std::string>(trimedLines, filteredLines, [](const std::string& text) { return !text.empty() && !text.starts_with('#'); });
+            Utility::Map<std::vector<tstring>, std::vector<Pattern>, tstring, Pattern>(filePaths, patterns, [&](tstring filePath) { return Read(filePath); });
+        }
 
-        if (filteredLines.size() == 0)
-            return Pattern(_T(""), "", 0U);
+    private:
+        static Pattern Read(tstring filePath)
+        {
+            std::vector<std::string> lines;
+            Shos::File::Read(filePath, lines);
 
-        const auto rule = filteredLines[0];
-        auto [width, height] = GetRleSize(rule);
+            std::vector<std::string> trimedLines;
+            Utility::Map<std::vector<std::string>, std::vector<std::string>, std::string, std::string>(lines, trimedLines, [](std::string text) { return String::Trim(text); });
 
-        std::vector<std::string> patternLines { filteredLines.begin() + 1, filteredLines.end() };
-        //std::vector<std::string> patternLines;
-        //std::copy(filteredLines.begin() + 1, filteredLines.end(), patternLines.begin());
-        ////{ &filteredLines[1], filteredLines.end() };
+            std::vector<std::string> filteredLines;
+            Utility::Filter<std::vector<std::string>, std::string>(trimedLines, filteredLines, [](const std::string& text) { return !text.empty() && !text.starts_with('#'); });
 
-        std::string pattern = Utility::Connect(patternLines);
-        pattern = RleToPattern(pattern, width, height);
+            if (filteredLines.size() == 0)
+                return Pattern(_T(""), "", 0U);
 
-        return Pattern(Shos::File::GetStem(filePath), pattern, width);
+            const auto rule = filteredLines[0];
+            auto [width, height] = GetRleSize(rule);
 
-        //const auto width = Utility::Maximum<std::vector<std::string>, std::string, UnsignedInteger>(filteredLines, [](const std::string& text) { return UnsignedInteger(text.length()); });
+            std::vector<std::string> patternLines{ filteredLines.begin() + 1, filteredLines.end() };
 
-        //std::vector<std::string> ajustedLines;
-        //Utility::Map<std::vector<std::string>, std::vector<std::string>, std::string, std::string>(filteredLines, ajustedLines, [&](std::string text) { return Adjust(text, width); });
+            std::string pattern = Utility::Connect(patternLines);
+            pattern = RleToPattern(pattern, width, height);
 
-        //std::string pattern = Utility::Connect(ajustedLines);
+            return Pattern(Shos::File::GetStem(filePath), pattern, width);
+        }
 
-        //return Pattern(Shos::File::GetStem(filePath), pattern, width);
-    }
-
-    static std::string RleToPattern(std::string rlePattern, UnsignedInteger width, UnsignedInteger height)
-    {
-        std::string pattern    ;
-        std::string partPattern;
-        size_t      count = 0U;
-        for (size_t index = 0U; index < rlePattern.length(); index++) {
-            const auto  character = std::tolower(rlePattern[index]);
-            if (std::isdigit(character)) {
-                count = GetRleCount(rlePattern, index);
-            } else {
-                switch (character) {
+        static std::string RleToPattern(std::string rlePattern, UnsignedInteger width, UnsignedInteger height)
+        {
+            std::string pattern;
+            std::string partPattern;
+            size_t      count = 0U;
+            for (size_t index = 0U; index < rlePattern.length(); index++) {
+                const auto  character = std::tolower(rlePattern[index]);
+                if (std::isdigit(character)) {
+                    count = GetRleCount(rlePattern, index);
+                } else {
+                    switch (character) {
                     case 'b':
                         partPattern.append(count == 0U ? 1U : count, '.');
                         break;
@@ -641,70 +424,64 @@ private:
                     case '!':
                         AppendPartPattern(partPattern, width, pattern);
                         return pattern;
+                    }
+                    count = 0U;
                 }
-                count = 0U;
             }
+            return pattern;
         }
-        return pattern;
-    }
 
-    static void AppendPartPattern(std::string& partPattern, UnsignedInteger width, std::string& pattern)
-    {
-        if      (partPattern.length() < width)
-            pattern.append(Adjust(partPattern, width));
-        else if (partPattern.length() > width)
-            pattern.append(partPattern.substr(0, width));
-        else
-            pattern.append(partPattern);
-    }
+        static void AppendPartPattern(std::string& partPattern, UnsignedInteger width, std::string& pattern)
+        {
+            if (partPattern.length() < width)
+                pattern.append(Pattern5::Adjust(partPattern, width));
+            else if (partPattern.length() > width)
+                pattern.append(partPattern.substr(0, width));
+            else
+                pattern.append(partPattern);
+        }
 
-    static size_t GetRleCount(std::string rlePattern, size_t& index)
-    {
-        size_t count  = 0U;
-        size_t number = 0U;
-        for (; index < rlePattern.length(); number++) {
-            const auto character = rlePattern[index + number];
-            if (std::isdigit(character)) {
-                count *= 10;
-                count += character - '0';
-            } else {
-                break;
+        static size_t GetRleCount(std::string rlePattern, size_t& index)
+        {
+            size_t count = 0U;
+            size_t number = 0U;
+            for (; index < rlePattern.length(); number++) {
+                const auto character = rlePattern[index + number];
+                if (std::isdigit(character)) {
+                    count *= 10;
+                    count += character - '0';
+                } else {
+                    break;
+                }
             }
+            if (number > 0U)
+                index += number - 1;
+            return count;
         }
-        if (number > 0U)
-            index += number - 1;
-        return count;
-    }
 
-    static std::tuple<UnsignedInteger, UnsignedInteger> GetRleSize(std::string rule)
-    {
-        rule.erase(std::remove_if(rule.begin(), rule.end(), ::isspace), rule.end());
+        static std::tuple<UnsignedInteger, UnsignedInteger> GetRleSize(std::string rule)
+        {
+            rule.erase(std::remove_if(rule.begin(), rule.end(), ::isspace), rule.end());
 
-        const auto tokens = String::Split(rule, ',');
-        std::vector<std::string> trimedTokens;
+            const auto tokens = String::Split(rule, ',');
+            std::vector<std::string> trimedTokens;
 
-        UnsignedInteger width  = 0U;
-        UnsignedInteger height = 0U;
+            UnsignedInteger width = 0U;
+            UnsignedInteger height = 0U;
 
-        try {
-            for (const auto& token : tokens) {
-                const auto lowerToken = String::ToLower(token);
-                if      (lowerToken.starts_with("x="))
-                    width  = std::stoi(token.substr(2));
-                else if (lowerToken.starts_with("y="))
-                    height = std::stoi(token.substr(2));
+            try {
+                for (const auto& token : tokens) {
+                    const auto lowerToken = String::ToLower(token);
+                    if (lowerToken.starts_with("x="))
+                        width = std::stoi(token.substr(2));
+                    else if (lowerToken.starts_with("y="))
+                        height = std::stoi(token.substr(2));
+                }
+            } catch (const std::exception&) {
             }
-        } catch (const std::exception&) {
+            return { width, height };
         }
-        return { width, height };
-    }
-
-    static std::string Adjust(std::string text, UnsignedInteger width)
-    {
-        if (text.length() < width)
-            text.append(width - text.length(), '.');
-        return text;
-    }
+    };
 };
 
 class BitCellSet
