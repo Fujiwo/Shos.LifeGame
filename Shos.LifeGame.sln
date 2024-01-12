@@ -9,6 +9,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documents", "Documents", "{
 	ProjectSection(SolutionItems) = preProject
 		LICENSE.txt = LICENSE.txt
 		Images\lifefame01.20240112.161130.gif = Images\lifefame01.20240112.161130.gif
+		Images\lifefame01.20240112.161130.mp4 = Images\lifefame01.20240112.161130.mp4
 		Images\lifegame01.png = Images\lifegame01.png
 		README.md = README.md
 	EndProjectSection
