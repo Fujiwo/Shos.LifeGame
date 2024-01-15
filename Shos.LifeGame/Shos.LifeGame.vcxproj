@@ -116,7 +116,7 @@
       </Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>robocopy "$(ProjectDir)CellData" "$(OutDir)CellData" /mir</Command>
+      <Command>robocopy "$(ProjectDir)CellData" "$(OutDir)CellData" /MIR</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -144,7 +144,7 @@
       </Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>robocopy "$(ProjectDir)CellData" "$(OutDir)CellData" /mir</Command>
+      <Command>robocopy "$(ProjectDir)CellData" "$(OutDir)CellData" /MIR</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
