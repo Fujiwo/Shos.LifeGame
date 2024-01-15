@@ -112,8 +112,12 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>robocopy "$(ProjectDir)\CellData" "$(OutDir)\CellData" *.* /mir</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>robocopy "$(ProjectDir)CellData" "$(OutDir)CellData" /mir</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -136,8 +140,12 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>robocopy "$(ProjectDir)\CellData" "$(OutDir)\CellData" *.* /mir</Command>
+      <Command>
+      </Command>
     </PreBuildEvent>
+    <PostBuildEvent>
+      <Command>robocopy "$(ProjectDir)CellData" "$(OutDir)CellData" /mir</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Shos.LifeGame.cpp" />
