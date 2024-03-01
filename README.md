@@ -4,9 +4,7 @@
 
 ![LifeGame](https://github.com/Fujiwo/Shos.LifeGame/blob/d3f10a69e5d811110e2ce61c762cc321bfd114af/Images/lifefame01.20240112.161130.gif)
 
-<div><video controls src="https://github.com/Fujiwo/Shos.LifeGame/blob/6dac05c4254f9cd7b37e7fe0f8287ea8ea9d6233/Images/lifefame01.20240112.161130.mp4" muted="false"></video></div>
-
-[Video](https://capture.dropbox.com/8Pu3gPGy8BBhdK6W)
+<div><video controls src="https://github.com/Fujiwo/Shos.LifeGame/raw/6dac05c4254f9cd7b37e7fe0f8287ea8ea9d6233/Images/lifefame01.20240112.161130.mp4" muted="false"></video></div>
 
 ## Overview
 
