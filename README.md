@@ -12,6 +12,8 @@
 
 [Video](https://capture.dropbox.com/8Pu3gPGy8BBhdK6W)
 
+## Overview
+
 This program is designed to simulate a cellular automaton known as the &quot;Life Game&quot;. Below are the main classes and their roles:
 
 - Random: A class for generating random numbers. It uses std::random_device and std::mt19937.
@@ -24,3 +26,14 @@ This program is designed to simulate a cellular automaton known as the &quot;Lif
 This program includes several optimizations to improve performance, such as multithreading and fast loops. These can be enabled or disabled through preprocessor directives (#define). For example, #define FAST enables fast loops, and #define MT enables multithreaded processing. Also, #define AREA enables optimization to track the area of active cells and reduce unnecessary calculations. These directives can be used to adjust the performance and resource usage of the program.
 
 Overall, this program provides various features and optimizations to efficiently simulate the &quot;Life Game&quot;. Each class and function is designed to serve a specific purpose. By understanding this program, you can gain a deep understanding of many important computer science concepts, such as game simulation, multithreaded processing, and performance optimization.
+
+## Pattern Files
+
+Pattern files can be stored and accessed in the CellData folder.
+
+The program supports the following two pattern file formats:
+
+- Life 1.05 (.LIF/.LIFE)
+- RLE (*.RLE)
+
+By default, the CellData folder contains 46 pattern files. To call each pattern, input Åe0Åf to Åe9Åf, ÅeaÅf to ÅezÅf, ÅeAÅf to ÅeJÅf. If you press a key that is not assigned a pattern, a random pattern will be generated.
