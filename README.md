@@ -16,12 +16,36 @@ This program is designed to simulate a cellular automaton known as the &quot;Lif
 
 Below are the main classes and their roles:
 
+### namespace Shos::LifeGame
+
 - Random: A class for generating random numbers. It uses std::random_device and std::mt19937.
 - Size, Point, Rect: These are classes representing size, coordinates, and rectangles, respectively. They are used to manage the game field and the position of cells.
 - Utility: This class provides methods to perform actions on each point within a given rectangle. It is used to scan all cells.
 - ThreadUtility: A class to support multithreaded processing. It performs actions in parallel for a specific range of integers.
 - Pattern, PatternSet: Classes to represent the initial patterns of the &quot;Life Game&quot;. Patterns are stored as strings representing whether a cell is alive or dead.
 - BitCellSet: A class to represent the game field. Each cell is represented as a bit.
+- Game: The main class of the program. It manages the game field and the rules of the &quot;Life Game&quot;. It also provides methods to perform the game simulation.
+
+### namespace Shos::LifeGame::Win32
+
+- BoardPainter: A class to be responsible for painting a game board on a Windows device context.
+
+### namespace Shos::LifeGame::Application
+
+- MainWindow: A class to manage the main window of the program. It handles user input and displays the game field.
+- Program: The main class of the program. It creates the main window and starts the game simulation.
+
+### namespace Shos::Win32
+
+- Window: A class to manage a Windows window. It provides methods to create and manage a window.
+- Program: A class to manage the main loop of a Windows application. It provides methods to start and stop the main loop.
+
+### namespace Shos
+
+- Helper: A class to provide various helper methods. It includes methods to convert between strings and numbers, and to measure time.
+- File: A class to manage files. It provides methods to read and write files.
+- String: A class to manage strings. It provides methods to split and join strings.
+- stopwatch: A class to measure time. It uses std::chrono::high_resolution_clock.
 
 This program includes several optimizations to improve performance, such as multithreading and fast loops. These can be enabled or disabled through preprocessor directives (#define). For example, #define FAST enables fast loops, and #define MT enables multithreaded processing. Also, #define AREA enables optimization to track the area of active cells and reduce unnecessary calculations. These directives can be used to adjust the performance and resource usage of the program.
 
