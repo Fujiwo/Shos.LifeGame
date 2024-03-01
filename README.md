@@ -1,15 +1,8 @@
 # Shos.LifeGame
 
-![LifeGame](https://github.com/Fujiwo/Shos.LifeGame/blob/ad75f0d9918889e01b941cb3e861f661ea3fed34/Images/lifegame01.png)
+[![LifeGame](https://github.com/Fujiwo/Shos.LifeGame/blob/ad75f0d9918889e01b941cb3e861f661ea3fed34/Images/lifegame01.png)](https://youtu.be/ny-VKZEAVkg)
 
 ![LifeGame](https://github.com/Fujiwo/Shos.LifeGame/blob/d3f10a69e5d811110e2ce61c762cc321bfd114af/Images/lifefame01.20240112.161130.gif)
-
-<!-- 
-<div><video controls src="https://github.com/Fujiwo/Shos.LifeGame/raw/6dac05c4254f9cd7b37e7fe0f8287ea8ea9d6233/Images/lifefame01.20240112.161130.mp4" muted="false"></video></div>
-[![Life Game](https://img.youtube.com/vi/ny-VKZEAVkg&feature=youtu.be/0.jpg)](&feature=youtu.be)
- -->
-
-[![LifeGame](https://github.com/Fujiwo/Shos.LifeGame/blob/ad75f0d9918889e01b941cb3e861f661ea3fed34/Images/lifegame01.png)](https://youtu.be/ny-VKZEAVkg)
 
 ## Overview
 
