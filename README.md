@@ -36,4 +36,4 @@ The program supports the following two pattern file formats:
 - Life 1.05 (.LIF/.LIFE)
 - RLE (*.RLE)
 
-By default, the CellData folder contains 46 pattern files. To call each pattern, input Åe0Åf to Åe9Åf, ÅeaÅf to ÅezÅf, ÅeAÅf to ÅeJÅf. If you press a key that is not assigned a pattern, a random pattern will be generated.
+By default, the CellData folder contains 46 pattern files. To call each pattern, input '0' to '9', 'a' to 'z', 'A' to 'J'. If you press a key that is not assigned a pattern, a random pattern will be generated.
