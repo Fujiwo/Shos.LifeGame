@@ -1,9 +1,5 @@
 # Shos.LifeGame
 
-&quot;C++/Win32 ultra-fast life game&quot;
-
-[Conway's Game of Life | Wikipedia](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life)
-
 ![LifeGame](https://github.com/Fujiwo/Shos.LifeGame/blob/ad75f0d9918889e01b941cb3e861f661ea3fed34/Images/lifegame01.png)
 
 ![LifeGame](https://github.com/Fujiwo/Shos.LifeGame/blob/d3f10a69e5d811110e2ce61c762cc321bfd114af/Images/lifefame01.20240112.161130.gif)
@@ -14,7 +10,15 @@
 
 ## Overview
 
-This program is designed to simulate a cellular automaton known as the &quot;Life Game&quot;. Below are the main classes and their roles:
+&quot;C++/Win32 ultra-fast life game&quot;
+
+[Conway's Game of Life | Wikipedia](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life)
+
+This program is designed to simulate a cellular automaton known as the &quot;Life Game&quot;.
+
+## Program
+
+Below are the main classes and their roles:
 
 - Random: A class for generating random numbers. It uses std::random_device and std::mt19937.
 - Size, Point, Rect: These are classes representing size, coordinates, and rectangles, respectively. They are used to manage the game field and the position of cells.
