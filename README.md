@@ -18,6 +18,11 @@ Below are the main classes and their roles:
 
 ### namespace Shos::LifeGame
 
+
+This program includes several optimizations to improve performance, such as multithreading and fast loops. These can be enabled or disabled through preprocessor directives (#define). For example, #define FAST enables fast loops, and #define MT enables multithreaded processing. Also, #define AREA enables optimization to track the area of active cells and reduce unnecessary calculations. These directives can be used to adjust the performance and resource usage of the program.
+
+Overall, this program provides various features and optimizations to efficiently simulate the &quot;Life Game&quot;. Each class and function is designed to serve a specific purpose. By understanding this program, you can gain a deep understanding of many important computer science concepts, such as game simulation, multithreaded processing, and performance optimization.
+
 - Random: A class for generating random numbers. It uses std::random_device and std::mt19937.
 - Size, Point, Rect: These are classes representing size, coordinates, and rectangles, respectively. They are used to manage the game field and the position of cells.
 - Utility: This class provides methods to perform actions on each point within a given rectangle. It is used to scan all cells.
@@ -37,6 +42,8 @@ Below are the main classes and their roles:
 
 ### namespace Shos::Win32
 
+This program provides a basic framework for creating a window and running a message loop using the Windows API.
+
 - Window: A class to manage a Windows window. It provides methods to create and manage a window.
 - Program: A class to manage the main loop of a Windows application. It provides methods to start and stop the main loop.
 
@@ -46,10 +53,6 @@ Below are the main classes and their roles:
 - File: A class to manage files. It provides methods to read and write files.
 - String: A class to manage strings. It provides methods to split and join strings.
 - stopwatch: A class to measure time. It uses std::chrono::high_resolution_clock.
-
-This program includes several optimizations to improve performance, such as multithreading and fast loops. These can be enabled or disabled through preprocessor directives (#define). For example, #define FAST enables fast loops, and #define MT enables multithreaded processing. Also, #define AREA enables optimization to track the area of active cells and reduce unnecessary calculations. These directives can be used to adjust the performance and resource usage of the program.
-
-Overall, this program provides various features and optimizations to efficiently simulate the &quot;Life Game&quot;. Each class and function is designed to serve a specific purpose. By understanding this program, you can gain a deep understanding of many important computer science concepts, such as game simulation, multithreaded processing, and performance optimization.
 
 ## Pattern Files
 
