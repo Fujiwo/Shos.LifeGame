@@ -146,7 +146,7 @@ private:
                << elapsed
                << _T("), FPS(")
                << std::setprecision(0)
-               << generation / elapsed
+               << (elapsed > 0 ? generation / elapsed : 0)
                << _T("), pattern(")
                << patternName
                << _T(")");
