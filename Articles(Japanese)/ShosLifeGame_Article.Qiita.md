@@ -258,7 +258,7 @@ return ::CreateBitmapIndirect(&bitmap);
 ただし、これは、あくまで共有された実行環境での結果であり、CPU、ビルド設定、実行条件の違いで値は変わる。
 
 #### 図10: Shos.LifeGame ベンチ結果(Optimization Level 0〜4)
-測定条件はPattern `Gun_Gunstar`、盤面サイズ `1000x1000`、反復 `1000` 回。ビルド設定は、Release。CPU・実行環境により結果は変動する。
+測定条件はPattern `Gun_Gunstar`、盤面サイズ `1000x1000 (1000,000セル)`、反復 `1000` 回。ビルド設定は、Release。CPU・実行環境により結果は変動する。
 <img src="https://raw.githubusercontent.com/Fujiwo/Shos.LifeGame/0b8c8159d4726cb7bac51249b6c6112e0778b79c/Articles(Japanese)/Images/ShosLifeGame_Figure10_Benchmark.svg" alt="図10 Shos.LifeGame ベンチ結果"></img>
 
 
