@@ -26,13 +26,13 @@ Below are the main classes and their roles:
 - BitCellSet: A class to represent the game field. Each cell is represented as a bit.
 - Game: The main class of the program. It manages the game field and the rules of the &quot;Life Game&quot;. It also provides methods to perform the game simulation.
 
-This namespace includes several optimizations to improve performance, such as multithreading and fast loops. These can be enabled or disabled through preprocessor directives (#define). For example, #define FAST enables fast loops, and #define MT enables multithreaded processing. Also, #define AREA enables optimization to track the area of active cells and reduce unnecessary calculations. These directives can be used to adjust the performance and resource usage of the program.
+This namespace includes several optimizations to improve performance, such as data representation switching, multithreading, and fast loops. These can be enabled or disabled through preprocessor directives (#define). `#define USEBITS` enables 1-bit-per-cell storage (when it is not defined, the board uses `bool**`). `#define FAST` enables fast loops, `#define MT` enables multithreaded processing, and `#define AREA` enables optimization to track the area of active cells and reduce unnecessary calculations. In this project, these four directives are treated as the four core optimization elements, while `BoardPainter` is treated separately as rendering optimization. These directives can be used to adjust the performance and resource usage of the program.
 
 Overall, this namespace provides various features and optimizations to efficiently simulate the &quot;Life Game&quot;. Each class and function is designed to serve a specific purpose. By understanding this program, you can gain a deep understanding of many important computer science concepts, such as game simulation, multithreaded processing, and performance optimization.
 
 ### namespace Shos::LifeGame::Win32
 
-- BoardPainter: A class to be responsible for painting a game board on a Windows device context.
+- BoardPainter: A class to be responsible for painting a game board on a Windows device context, and for rendering optimization.
 
 ### namespace Shos::LifeGame::Application
 

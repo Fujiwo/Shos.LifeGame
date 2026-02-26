@@ -1,6 +1,6 @@
 #pragma once
 
-//#define USEBOOL // Boolean enabled
+//#define USEBITS // Bits enabled
 #define FAST    // Fast loops enabled
 #define MT      // Multi-threading enabled
 #define AREA    // Area enabled
@@ -625,7 +625,7 @@ private:
     }
 };
 
-#if defined(USEBOOL)
+#if !defined(USEBITS)
 class Board final
 {
     const Size      size;
@@ -784,7 +784,7 @@ public:
     Rect GetRect() const
     { return Rect(Point(), size); }
 };
-#else // USEBOOL
+#else // USEBITS
 class Board final : public BitCellSet
 {
 public:
@@ -855,7 +855,7 @@ public:
     void Set(const Point& point, bool value)
     { BitCellSet::Set(point, value); }
 };
-#endif // USEBOOL
+#endif // USEBITS
 
 class Game final
 {
