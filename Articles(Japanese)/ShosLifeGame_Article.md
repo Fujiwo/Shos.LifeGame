@@ -173,7 +173,7 @@ Gun/Oscillator/Spaceship などのカテゴリで、用途に応じたパター�
 | MT | マルチスレッド | 更新計算 | 大盤面・多コア環境 | 同期コスト・環境依存 |
 | AREA | 走査範囲の最適化 | 走査範囲 | 疎なパターン | 領域管理が複雑化 |
 
-### 5.1 USEBITS ("TRUE" のとき: ビット演算とビットパターン転送による描画)
+### 5.1 USEBITS (ビット演算とビットパターン転送による描画)
 ```cpp
 //#define USEBITS // Bits enabled
 #if !defined(USEBITS)
