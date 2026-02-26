@@ -1,4 +1,6 @@
-configuration,time_seconds,speedup_vs_result,source
-Result,23.363,1.000,"Shos.LifeGame.Test.cpp comment"
-FAST,9.109,2.564,"Shos.LifeGame.Test.cpp comment"
-MT,3.270,7.146,"Shos.LifeGame.Test.cpp comment"
+﻿Optimization Level,USEBOOL (Boolean enabled),FAST (Fast loops enabled),MT (Multi-threading enabled),AREA (Area enabled),Pattern,Board width,Board height,Number of generations,Time (seconds),FPS (Frames Per Second)
+0,TRUE,FALSE,FALSE,FALSE,Gun_Gunstar,1000,1000,1000,63.8,16
+1,FALSE,FALSE,FALSE,FALSE,Gun_Gunstar,1000,1000,1000,60.2,17
+2,FALSE,TRUE,FALSE,FALSE,Gun_Gunstar,1000,1000,1000,24.2,41
+3,FALSE,TRUE,TRUE,FALSE,Gun_Gunstar,1000,1000,1000,11.7,86
+4,FALSE,TRUE,TRUE,TRUE,Gun_Gunstar,1000,1000,1000,4.1,244

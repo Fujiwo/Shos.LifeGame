@@ -1,4 +1,4 @@
-﻿#include <tchar.h>
+#include <tchar.h>
 #include <sstream>
 #include <iomanip>
 
@@ -13,6 +13,8 @@ using namespace std;
 #else // UNICODE
 #define tstringstream stringstream
 #endif // UNICODE
+
+//#define LAP_TIMES   1000
 
 namespace Shos::LifeGame::Application {
 
@@ -38,7 +40,7 @@ class MainWindow final : public Window
     stopwatch stopwatch;
 
 public:
-    MainWindow() : game({ 800, 800 }), paintPosition({ 0, 0 }), renderingArea({ 0, 0, 0, 0 })
+    MainWindow() : game({ 1000, 1000 }), paintPosition({ 0, 0 }), renderingArea({ 0, 0, 0, 0 })
 #if defined(TIMER)
         , timer(nullptr)
 #endif // TIMER
@@ -132,11 +134,32 @@ private:
     void SetTitle() const
     { SetText(GetTitle()); }
 
+#if defined(LAP_TIMES)
+    struct Lap
+    {
+        unsigned long long generation = 0;
+        double             elapsed = 0.0;
+
+        double GetFps() { return elapsed > 0.0 ? generation / elapsed : 0.0; }
+    };
+
+    static Lap lap;
+#endif //LAP_TIMES
+
     tstring GetTitle() const
     {
-        const auto    generation  = game.GetGeneration();
-        const auto    patternName = game.GetPatternName();
-        const auto    elapsed     = stopwatch.get_elapsed();
+        auto    generation  = game.GetGeneration();
+        auto    patternName = game.GetPatternName();
+        auto    elapsed     = stopwatch.get_elapsed();
+#if defined(LAP_TIMES)
+        if (generation == LAP_TIMES) {
+            lap.generation = generation;
+            lap.elapsed    = elapsed   ;
+        } else if (generation > LAP_TIMES) {
+            generation     = lap.generation;
+            elapsed        = lap.elapsed   ;
+        }
+#endif //LAP_TIMES
         tstringstream stream;
         stream << _T("Sho's Life Game: generation(")
                << generation
@@ -146,7 +169,7 @@ private:
                << elapsed
                << _T("), FPS(")
                << std::setprecision(0)
-               << (elapsed > 0 ? generation / elapsed : 0)
+               << (elapsed > 0.0 ? generation / elapsed : 0.0)
                << _T("), pattern(")
                << patternName
                << _T(")");
@@ -157,6 +180,10 @@ private:
 const TCHAR MainWindow::title[]           = _T("Shos.LifeGame"         );
 const TCHAR MainWindow::windowClassName[] = _T("ShosLifeGameMainWindow");
 
+#if defined(LAP_TIMES)
+MainWindow::Lap MainWindow::lap;
+#endif //LAP_TIMES
+
 class Program : public Shos::Win32::Program
 {
     MainWindow mainWindow;
@@ -165,7 +192,6 @@ protected:
     virtual Window* CreateMainWindow(HINSTANCE instanceHandle, int showCommand) override
     { return mainWindow.Create(instanceHandle, showCommand) ? &mainWindow : nullptr; }
 };
-
 } // namespace Shos::LifeGame::Application
 
 int APIENTRY _tWinMain(_In_     HINSTANCE instanceHandle        ,
