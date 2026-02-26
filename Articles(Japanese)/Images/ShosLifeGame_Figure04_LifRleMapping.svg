@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+	<defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#555"/></marker></defs>
+	<rect width="1200" height="675" fill="#fff"/>
+	<text x="600" y="56" text-anchor="middle" font-size="30" font-family="Segoe UI, Arial, sans-serif" fill="#222">図4. .lif と .rle の表現対応</text>
+
+	<rect x="120" y="120" width="430" height="420" rx="10" fill="#f9fbff" stroke="#88a"/>
+	<text x="335" y="165" text-anchor="middle" font-size="24" font-family="Segoe UI, Arial, sans-serif" fill="#222">.lif（行テキスト）</text>
+	<text x="170" y="230" font-size="22" font-family="Consolas, monospace" fill="#333">..*..</text>
+	<text x="170" y="270" font-size="22" font-family="Consolas, monospace" fill="#333">...*.</text>
+	<text x="170" y="310" font-size="22" font-family="Consolas, monospace" fill="#333">.***.</text>
+
+	<rect x="650" y="120" width="430" height="420" rx="10" fill="#fff9f3" stroke="#c98"/>
+	<text x="865" y="165" text-anchor="middle" font-size="24" font-family="Segoe UI, Arial, sans-serif" fill="#222">.rle（連長圧縮）</text>
+	<text x="700" y="230" font-size="22" font-family="Consolas, monospace" fill="#333">x = 5, y = 3</text>
+	<text x="700" y="275" font-size="22" font-family="Consolas, monospace" fill="#333">2bobo$3bo$bo3b!</text>
+	<text x="700" y="340" font-size="18" font-family="Segoe UI, Arial, sans-serif" fill="#555">b: dead, o: alive, $: newline, !: end</text>
+
+	<line x1="550" y1="330" x2="650" y2="330" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+	<line x1="650" y1="360" x2="550" y2="360" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+	<text x="600" y="320" text-anchor="middle" font-size="18" font-family="Segoe UI, Arial, sans-serif" fill="#333">相互変換</text>
+</svg>

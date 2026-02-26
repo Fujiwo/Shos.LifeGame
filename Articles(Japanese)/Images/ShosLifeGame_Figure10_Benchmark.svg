@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+	<rect width="1200" height="675" fill="#ffffff"/>
+
+	<text x="600" y="56" text-anchor="middle" font-size="30" font-family="Segoe UI, Arial, sans-serif" fill="#222">
+		図10. Shos.LifeGame ベンチ結果（Result / FAST / MT）
+	</text>
+
+	<line x1="140" y1="580" x2="1080" y2="580" stroke="#333" stroke-width="2"/>
+	<line x1="140" y1="110" x2="140" y2="580" stroke="#333" stroke-width="2"/>
+
+	<line x1="140" y1="110" x2="1080" y2="110" stroke="#e6e6e6" stroke-width="1"/>
+	<line x1="140" y1="227.5" x2="1080" y2="227.5" stroke="#e6e6e6" stroke-width="1"/>
+	<line x1="140" y1="345" x2="1080" y2="345" stroke="#e6e6e6" stroke-width="1"/>
+	<line x1="140" y1="462.5" x2="1080" y2="462.5" stroke="#e6e6e6" stroke-width="1"/>
+	<line x1="140" y1="580" x2="1080" y2="580" stroke="#e6e6e6" stroke-width="1"/>
+
+	<text x="112" y="586" text-anchor="end" font-size="18" font-family="Segoe UI, Arial, sans-serif" fill="#444">0</text>
+	<text x="112" y="468" text-anchor="end" font-size="18" font-family="Segoe UI, Arial, sans-serif" fill="#444">6</text>
+	<text x="112" y="350" text-anchor="end" font-size="18" font-family="Segoe UI, Arial, sans-serif" fill="#444">12</text>
+	<text x="112" y="233" text-anchor="end" font-size="18" font-family="Segoe UI, Arial, sans-serif" fill="#444">18</text>
+	<text x="112" y="116" text-anchor="end" font-size="18" font-family="Segoe UI, Arial, sans-serif" fill="#444">24</text>
+
+	<text x="70" y="350" transform="rotate(-90 70 350)" text-anchor="middle" font-size="20" font-family="Segoe UI, Arial, sans-serif" fill="#444">
+		実行時間（秒）
+	</text>
+
+	<rect x="250" y="122.4" width="170" height="457.6" fill="#4C78A8"/>
+	<rect x="525" y="401.6" width="170" height="178.4" fill="#F58518"/>
+	<rect x="800" y="516.0" width="170" height="64.0" fill="#54A24B"/>
+
+	<text x="335" y="114" text-anchor="middle" font-size="20" font-family="Consolas, Segoe UI, Arial, sans-serif" fill="#222">23.363s</text>
+	<text x="610" y="393" text-anchor="middle" font-size="20" font-family="Consolas, Segoe UI, Arial, sans-serif" fill="#222">9.109s</text>
+	<text x="885" y="508" text-anchor="middle" font-size="20" font-family="Consolas, Segoe UI, Arial, sans-serif" fill="#222">3.270s</text>
+
+	<text x="335" y="612" text-anchor="middle" font-size="22" font-family="Segoe UI, Arial, sans-serif" fill="#222">Result</text>
+	<text x="610" y="612" text-anchor="middle" font-size="22" font-family="Segoe UI, Arial, sans-serif" fill="#222">FAST</text>
+	<text x="885" y="612" text-anchor="middle" font-size="22" font-family="Segoe UI, Arial, sans-serif" fill="#222">MT</text>
+
+	<text x="600" y="650" text-anchor="middle" font-size="16" font-family="Segoe UI, Arial, sans-serif" fill="#555">
+		出典: Shos.LifeGame.Test/Shos.LifeGame.Test.cpp のコメント値（size=2048, times=100）
+	</text>
+</svg>

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+	<rect width="1200" height="675" fill="#fff"/>
+	<text x="600" y="56" text-anchor="middle" font-size="30" font-family="Segoe UI, Arial, sans-serif" fill="#222">図8. 最適化テクニックの適用レイヤー（5要素）</text>
+
+	<rect x="130" y="105" width="940" height="80" rx="8" fill="#eef6ff" stroke="#6a8"/>
+	<text x="160" y="155" font-size="23" font-family="Segoe UI, Arial, sans-serif" fill="#222">データ表現レイヤー</text>
+	<text x="470" y="155" font-size="23" font-family="Consolas, monospace" fill="#0a6">USEBOOL</text>
+
+	<rect x="130" y="205" width="940" height="80" rx="8" fill="#fff7ef" stroke="#c98"/>
+	<text x="160" y="255" font-size="23" font-family="Segoe UI, Arial, sans-serif" fill="#222">ループ実装レイヤー</text>
+	<text x="470" y="255" font-size="23" font-family="Consolas, monospace" fill="#b60">FAST</text>
+
+	<rect x="130" y="305" width="940" height="80" rx="8" fill="#f0fff0" stroke="#7a7"/>
+	<text x="160" y="355" font-size="23" font-family="Segoe UI, Arial, sans-serif" fill="#222">並列実行レイヤー</text>
+	<text x="470" y="355" font-size="23" font-family="Consolas, monospace" fill="#276">MT</text>
+
+	<rect x="130" y="405" width="940" height="80" rx="8" fill="#f6f6f6" stroke="#888"/>
+	<text x="160" y="455" font-size="23" font-family="Segoe UI, Arial, sans-serif" fill="#222">処理範囲制御レイヤー</text>
+	<text x="470" y="455" font-size="23" font-family="Consolas, monospace" fill="#444">AREA</text>
+
+	<rect x="130" y="505" width="940" height="80" rx="8" fill="#f3f0ff" stroke="#77a"/>
+	<text x="160" y="555" font-size="23" font-family="Segoe UI, Arial, sans-serif" fill="#222">描画転送レイヤー</text>
+	<text x="470" y="555" font-size="23" font-family="Consolas, monospace" fill="#55a">BoardPainter + GetBits + BitBlt</text>
+</svg>

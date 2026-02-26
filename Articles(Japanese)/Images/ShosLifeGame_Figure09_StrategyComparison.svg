@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+	<rect width="1200" height="675" fill="#fff"/>
+	<text x="600" y="56" text-anchor="middle" font-size="30" font-family="Segoe UI, Arial, sans-serif" fill="#222">図9. 処理方式の比較（全面/領域・単一/分割）</text>
+
+	<rect x="120" y="120" width="460" height="490" rx="10" fill="#f9fbff" stroke="#7aa"/>
+	<text x="350" y="160" text-anchor="middle" font-size="24" font-family="Segoe UI, Arial, sans-serif" fill="#222">全面走査 + 単一スレッド</text>
+	<rect x="180" y="210" width="340" height="300" fill="#fff" stroke="#999"/>
+	<line x1="350" y1="210" x2="350" y2="510" stroke="#ddd"/>
+	<line x1="180" y1="360" x2="520" y2="360" stroke="#ddd"/>
+	<text x="350" y="550" text-anchor="middle" font-size="18" font-family="Segoe UI, Arial, sans-serif" fill="#555">全セルを毎世代処理</text>
+
+	<rect x="620" y="120" width="460" height="490" rx="10" fill="#fff8f1" stroke="#c98"/>
+	<text x="850" y="160" text-anchor="middle" font-size="24" font-family="Segoe UI, Arial, sans-serif" fill="#222">領域限定 + 分割スレッド</text>
+	<rect x="680" y="210" width="340" height="300" fill="#fff" stroke="#999"/>
+	<rect x="760" y="270" width="180" height="140" fill="#ffe2cc" stroke="#d97"/>
+	<line x1="760" y1="340" x2="940" y2="340" stroke="#c66" stroke-dasharray="6 4"/>
+	<line x1="850" y1="270" x2="850" y2="410" stroke="#c66" stroke-dasharray="6 4"/>
+	<text x="850" y="550" text-anchor="middle" font-size="18" font-family="Segoe UI, Arial, sans-serif" fill="#555">活動領域を分割して処理</text>
+</svg>

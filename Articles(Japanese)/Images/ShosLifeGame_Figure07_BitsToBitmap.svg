@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+	<defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#555"/></marker></defs>
+	<rect width="1200" height="675" fill="#fff"/>
+	<text x="600" y="56" text-anchor="middle" font-size="30" font-family="Segoe UI, Arial, sans-serif" fill="#222">図7. 盤面ビット列からBitmap描画への変換</text>
+
+	<rect x="110" y="220" width="250" height="120" rx="10" fill="#eef6ff" stroke="#7aa"/>
+	<text x="235" y="275" text-anchor="middle" font-size="22" font-family="Segoe UI, Arial, sans-serif">Board::GetBits()</text>
+	<text x="235" y="305" text-anchor="middle" font-size="16" font-family="Consolas, monospace" fill="#555">1bit cell array</text>
+
+	<rect x="430" y="220" width="260" height="120" rx="10" fill="#fff7ef" stroke="#c98"/>
+	<text x="560" y="275" text-anchor="middle" font-size="22" font-family="Segoe UI, Arial, sans-serif">CreateBitmapIndirect</text>
+	<text x="560" y="305" text-anchor="middle" font-size="16" font-family="Consolas, monospace" fill="#555">HBITMAP</text>
+
+	<rect x="760" y="220" width="310" height="120" rx="10" fill="#f0fff0" stroke="#7a7"/>
+	<text x="915" y="275" text-anchor="middle" font-size="22" font-family="Segoe UI, Arial, sans-serif">BitBlt to Window DC</text>
+	<text x="915" y="305" text-anchor="middle" font-size="16" font-family="Consolas, monospace" fill="#555">visible pixels</text>
+
+	<line x1="360" y1="280" x2="430" y2="280" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+	<line x1="690" y1="280" x2="760" y2="280" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+</svg>

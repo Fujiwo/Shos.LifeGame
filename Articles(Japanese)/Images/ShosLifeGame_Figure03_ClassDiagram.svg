@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+	<defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#555"/></marker></defs>
+	<rect width="1200" height="675" fill="#fff"/>
+	<text x="600" y="56" text-anchor="middle" font-size="30" font-family="Segoe UI, Arial, sans-serif" fill="#222">図3. 主要クラス関係図</text>
+
+	<rect x="120" y="140" width="220" height="80" rx="8" fill="#eef6ff" stroke="#5a8"/>
+	<text x="230" y="188" text-anchor="middle" font-size="24" font-family="Segoe UI, Arial, sans-serif">MainWindow</text>
+
+	<rect x="460" y="140" width="220" height="80" rx="8" fill="#eef6ff" stroke="#5a8"/>
+	<text x="570" y="188" text-anchor="middle" font-size="24" font-family="Segoe UI, Arial, sans-serif">Game</text>
+
+	<rect x="820" y="140" width="240" height="80" rx="8" fill="#eef6ff" stroke="#5a8"/>
+	<text x="940" y="188" text-anchor="middle" font-size="24" font-family="Segoe UI, Arial, sans-serif">BoardPainter</text>
+
+	<rect x="380" y="320" width="180" height="70" rx="8" fill="#f8f8f8" stroke="#888"/>
+	<text x="470" y="362" text-anchor="middle" font-size="21" font-family="Segoe UI, Arial, sans-serif">Board</text>
+
+	<rect x="620" y="320" width="200" height="70" rx="8" fill="#f8f8f8" stroke="#888"/>
+	<text x="720" y="362" text-anchor="middle" font-size="21" font-family="Segoe UI, Arial, sans-serif">PatternSet</text>
+
+	<line x1="340" y1="180" x2="460" y2="180" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+	<line x1="680" y1="180" x2="820" y2="180" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+	<line x1="560" y1="220" x2="500" y2="320" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+	<line x1="620" y1="220" x2="700" y2="320" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+
+	<text x="600" y="620" text-anchor="middle" font-size="18" font-family="Segoe UI, Arial, sans-serif" fill="#555">MainWindowが更新を駆動し、Gameが盤面とパターンを管理、BoardPainterが描画を担当</text>
+</svg>

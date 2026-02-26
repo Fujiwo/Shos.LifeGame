@@ -1,0 +1,4 @@
+configuration,time_seconds,speedup_vs_result,source
+Result,23.363,1.000,"Shos.LifeGame.Test.cpp comment"
+FAST,9.109,2.564,"Shos.LifeGame.Test.cpp comment"
+MT,3.270,7.146,"Shos.LifeGame.Test.cpp comment"

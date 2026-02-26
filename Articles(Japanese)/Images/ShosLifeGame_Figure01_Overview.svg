@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+	<rect width="1200" height="675" fill="#ffffff"/>
+	<text x="600" y="56" text-anchor="middle" font-size="30" font-family="Segoe UI, Arial, sans-serif" fill="#222">図1. Shos.LifeGame 実行画面イメージ</text>
+
+	<rect x="120" y="95" width="960" height="520" rx="10" fill="#fafafa" stroke="#333" stroke-width="2"/>
+	<rect x="160" y="140" width="720" height="430" fill="#ffffff" stroke="#999"/>
+	<text x="520" y="128" text-anchor="middle" font-size="18" font-family="Segoe UI, Arial, sans-serif" fill="#444">Game Board (800x800)</text>
+
+	<g fill="#2a9d8f">
+		<rect x="220" y="220" width="10" height="10"/><rect x="230" y="230" width="10" height="10"/><rect x="240" y="240" width="10" height="10"/>
+		<rect x="500" y="300" width="10" height="10"/><rect x="510" y="310" width="10" height="10"/><rect x="520" y="300" width="10" height="10"/>
+		<rect x="720" y="420" width="10" height="10"/><rect x="730" y="430" width="10" height="10"/><rect x="740" y="420" width="10" height="10"/>
+	</g>
+
+	<rect x="910" y="140" width="140" height="430" fill="#f7f7f7" stroke="#bbb"/>
+	<text x="980" y="170" text-anchor="middle" font-size="16" font-family="Segoe UI, Arial, sans-serif" fill="#333">Info</text>
+	<text x="930" y="210" font-size="14" font-family="Consolas, monospace" fill="#333">Gen: 1024</text>
+	<text x="930" y="235" font-size="14" font-family="Consolas, monospace" fill="#333">Time: 3.2s</text>
+	<text x="930" y="260" font-size="14" font-family="Consolas, monospace" fill="#333">FPS: 319</text>
+	<text x="930" y="285" font-size="14" font-family="Consolas, monospace" fill="#333">Pattern: Gun</text>
+
+	<text x="600" y="650" text-anchor="middle" font-size="16" font-family="Segoe UI, Arial, sans-serif" fill="#555">更新・描画・状態表示の全体イメージ</text>
+</svg>
