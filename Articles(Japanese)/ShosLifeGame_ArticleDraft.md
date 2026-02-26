@@ -192,6 +192,7 @@ return ::CreateBitmapIndirect(&bitmap);
 ## 6. 比較検証の進め方
 ### 6.1 比較条件
 比較では、1回につき切り替える要素を1つに限定し、盤面サイズ・初期パターン・世代数を固定する。また Debug と Release を混在させると解釈が曖昧になるため、評価は同一ビルド条件で揃えるのが前提である。
+本章のLevel表は、前Levelから要素を1つずつ追加する累積比較として示している。
 
 ### 6.2 指標
 主要指標は、世代/秒(FPS相当)と総実行時間である。可能であればメモリ使用量も併記すると、速度だけでなく副作用も含めた比較になる。
@@ -199,33 +200,26 @@ return ::CreateBitmapIndirect(&bitmap);
 ### 6.3 結果の読み解き
 結果を読むときは、条件依存を先に意識する。小盤面では `MT` の利得が出にくく、疎なパターンでは `AREA` が効きやすい一方、どの要素も常に最速を保証するわけではない。
 
-### 6.4 既存テスト結果を「高速化の成果」として示す
-`Shos.LifeGame.Test/Shos.LifeGame.Test.cpp` には、次の実測コメントが記載されている。
+### 6.4 最新ベンチ結果を「高速化の成果」として示す
+`Articles(Japanese)/ShosLifeGame_BenchmarkData.csv` には、Optimization Level 0〜4の実測値が記録されている。
 
-```cpp
-// Result:
-//       (23.363s.)
-// FAST: ( 9.109s.)
-// MT  : ( 3.270s.)
-```
+| Level | USEBOOL | FAST | MT | AREA | 実行時間 | FPS | Level 1比(高速化倍率) |
+|---:|:---:|:---:|:---:|:---:|---:|---:|---:|
+| 0 | TRUE | FALSE | FALSE | FALSE | 63.8s | 16 | 約0.94x |
+| 1 | FALSE | FALSE | FALSE | FALSE | 60.2s | 17 | 1.00x |
+| 2 | FALSE | TRUE | FALSE | FALSE | 24.2s | 41 | 約2.49x |
+| 3 | FALSE | TRUE | TRUE | FALSE | 11.7s | 86 | 約5.15x |
+| 4 | FALSE | TRUE | TRUE | TRUE | 4.1s | 244 | 約14.68x |
 
-第6章では、まずこの値を「結論先出し」の成果例として受け取り、その後に条件と解釈を重ねる。
-
-| 構成 | 実行時間 | Result比(高速化倍率) |
-|---|---:|---:|
-| Result(ベース) | 23.363s | 1.00x |
-| FAST | 9.109s | 約2.56x |
-| MT | 3.270s | 約7.15x |
-
-この表からは、`FAST` がベース比で約2.56倍、`MT` が約7.15倍の短縮例になっていることが読み取れる。ここで重要なのは、これを絶対値として断定しないことである。あくまで共有された実行環境での結果であり、CPU、ビルド設定、実行条件の違いで値は変わる。再測定を行う場合は、サイズ・回数・Release/Debug を必ず併記して比較可能性を担保する。
+この表からは、Level 1を基準にすると `FAST` 追加で約2.49倍、`MT` 追加で約5.15倍、`AREA` まで有効化したLevel 4で約14.68倍の短縮例になることが読み取れる。加えて、Level 0とLevel 1の比較により、`USEBOOL=TRUE` の構成が約6%遅くなる(63.8s→60.2s)点も確認できる。ここで重要なのは、これを絶対値として断定しないことである。あくまで共有された実行環境での結果であり、CPU、ビルド設定、実行条件の違いで値は変わる。再測定を行う場合は、Pattern・サイズ・回数・Release/Debug を必ず併記して比較可能性を担保する。
 図10はこの表を視覚化したもので、本文の解釈とセットで見ることを前提としている。
 
 #### 図10
 ![図10 Shos.LifeGame ベンチ結果](./Images/ShosLifeGame_Figure10_Benchmark.svg)
 
-**図10. Shos.LifeGame ベンチ結果(Result / FAST / MT)**  
-`Shos.LifeGame.Test/Shos.LifeGame.Test.cpp` に記載されたコメント値(Result: 23.363s, FAST: 9.109s, MT: 3.270s)をもとに作成。  
-測定条件は盤面サイズ `2048x2048`、反復 `100` 回。CPU・ビルド設定(Debug/Release)・実行環境により結果は変動する。
+**図10. Shos.LifeGame ベンチ結果(Optimization Level 0〜4)**  
+`Articles(Japanese)/ShosLifeGame_BenchmarkData.csv` の実測値(Level 0: 63.8s, Level 1: 60.2s, Level 2: 24.2s, Level 3: 11.7s, Level 4: 4.1s)をもとに作成。  
+測定条件はPattern `Gun_Gunstar`、盤面サイズ `1000x1000`、反復 `1000` 回。CPU・ビルド設定(Debug/Release)・実行環境により結果は変動する。
 
 ---
 

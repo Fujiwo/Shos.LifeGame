@@ -29,7 +29,7 @@
 ### 2-1. 1本目の軸(性能)
 1. LifeGameは単純でも全セル反復で重くなる。  
 2. `Shos.LifeGame` は5要素(`USEBOOL` / `FAST` / `MT` / `AREA` / `BoardPainter`)でボトルネックを分解している。  
-3. 実測例(`23.363s / 9.109s / 3.270s`)で改善の方向性を確認する。
+3. 実測例(`63.8s / 60.2s / 24.2s / 11.7s / 4.1s`)で改善の方向性を確認する。
 
 ### 2-2. 2本目の軸(データと描画)
 1. パターン入力(`.lif` / `.rle`)を内部表現へ落とす。  
@@ -132,7 +132,8 @@
 - 第7章: 次の一歩を示して学習を継続可能にする。
 
 ### 6-1. 第6章の構成ルール(結論先出し)
-- 第6章冒頭に「Result / FAST / MT の要約表」を最初に置く。
+- 第6章冒頭に「Optimization Level 0〜4 の要約表」を最初に置く。
+- Level表は、前Levelから要素を1つずつ追加する累積比較として示す。
 - その後に「測定条件」「環境依存注記」「解釈ポイント」を並べる。
 - 読者が先に成果を掴み、後から正しい読み方へ進める順序にする。
 
@@ -201,10 +202,11 @@
 ---
 
 ## 9. 検証・数値掲載ルール
-- 掲載値は `Shos.LifeGame.Test.cpp` コメント値(Result `23.363s`, FAST `9.109s`, MT `3.270s`)を成果例として扱う。
-- 表と図10の両方に同値を反映する。
+- 掲載値は `Articles(Japanese)/ShosLifeGame_BenchmarkData.csv` のOptimization Level 0〜4(`63.8s`, `60.2s`, `24.2s`, `11.7s`, `4.1s`)を成果例として扱う。
+- 表と図10の両方に、Optimization Level 0〜4の同値を反映する。
+- 倍率は Level 1(`60.2s`)基準で併記し、FAST約`2.49x`、MT約`5.15x`、AREA約`14.68x`を明示する。
 - 断定を避け、必ず環境依存注記を添える。
-- 可能なら再測定時に `Release/盤面サイズ/反復回数` を併記する。
+- 可能なら再測定時に `Release/Pattern/盤面サイズ/反復回数` を併記する。
 
 ---
 
@@ -217,7 +219,7 @@
 - `Shos.LifeGame/Shos.LifeGame.cpp`
   - `MainWindow::Next`, `MainWindow::OnPaint`
 - `Shos.LifeGame.Test/Shos.LifeGame.Test.cpp`
-  - `Program::Run`, 実測コメント値
+  - `Program::Run`, 計測処理の実装参照
 
 ---
 

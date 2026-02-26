@@ -1,42 +1,48 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
-	<rect width="1200" height="675" fill="#ffffff"/>
+	<rect width="1200" height="675" fill="#fff"/>
 
 	<text x="600" y="56" text-anchor="middle" font-size="30" font-family="Segoe UI, Arial, sans-serif" fill="#222">
-		図10. Shos.LifeGame ベンチ結果（Result / FAST / MT）
+		図10. Shos.LifeGame ベンチ結果（Optimization Level 0〜4）
 	</text>
 
-	<line x1="140" y1="580" x2="1080" y2="580" stroke="#333" stroke-width="2"/>
-	<line x1="140" y1="110" x2="140" y2="580" stroke="#333" stroke-width="2"/>
+	<line x1="140" y1="580" x2="1080" y2="580" stroke="#999" stroke-width="1.5"/>
+	<line x1="140" y1="110" x2="140" y2="580" stroke="#999" stroke-width="1.5"/>
 
-	<line x1="140" y1="110" x2="1080" y2="110" stroke="#e6e6e6" stroke-width="1"/>
-	<line x1="140" y1="227.5" x2="1080" y2="227.5" stroke="#e6e6e6" stroke-width="1"/>
-	<line x1="140" y1="345" x2="1080" y2="345" stroke="#e6e6e6" stroke-width="1"/>
-	<line x1="140" y1="462.5" x2="1080" y2="462.5" stroke="#e6e6e6" stroke-width="1"/>
-	<line x1="140" y1="580" x2="1080" y2="580" stroke="#e6e6e6" stroke-width="1"/>
+	<line x1="140" y1="110" x2="1080" y2="110" stroke="#edf2f7" stroke-width="1"/>
+	<line x1="140" y1="227.5" x2="1080" y2="227.5" stroke="#edf2f7" stroke-width="1"/>
+	<line x1="140" y1="345" x2="1080" y2="345" stroke="#edf2f7" stroke-width="1"/>
+	<line x1="140" y1="462.5" x2="1080" y2="462.5" stroke="#edf2f7" stroke-width="1"/>
+	<line x1="140" y1="580" x2="1080" y2="580" stroke="#edf2f7" stroke-width="1"/>
 
 	<text x="112" y="586" text-anchor="end" font-size="18" font-family="Segoe UI, Arial, sans-serif" fill="#444">0</text>
-	<text x="112" y="468" text-anchor="end" font-size="18" font-family="Segoe UI, Arial, sans-serif" fill="#444">6</text>
-	<text x="112" y="350" text-anchor="end" font-size="18" font-family="Segoe UI, Arial, sans-serif" fill="#444">12</text>
-	<text x="112" y="233" text-anchor="end" font-size="18" font-family="Segoe UI, Arial, sans-serif" fill="#444">18</text>
-	<text x="112" y="116" text-anchor="end" font-size="18" font-family="Segoe UI, Arial, sans-serif" fill="#444">24</text>
+	<text x="112" y="468" text-anchor="end" font-size="18" font-family="Segoe UI, Arial, sans-serif" fill="#444">16</text>
+	<text x="112" y="350" text-anchor="end" font-size="18" font-family="Segoe UI, Arial, sans-serif" fill="#444">32</text>
+	<text x="112" y="233" text-anchor="end" font-size="18" font-family="Segoe UI, Arial, sans-serif" fill="#444">48</text>
+	<text x="112" y="116" text-anchor="end" font-size="18" font-family="Segoe UI, Arial, sans-serif" fill="#444">64</text>
 
 	<text x="70" y="350" transform="rotate(-90 70 350)" text-anchor="middle" font-size="20" font-family="Segoe UI, Arial, sans-serif" fill="#444">
 		実行時間（秒）
 	</text>
 
-	<rect x="250" y="122.4" width="170" height="457.6" fill="#4C78A8"/>
-	<rect x="525" y="401.6" width="170" height="178.4" fill="#F58518"/>
-	<rect x="800" y="516.0" width="170" height="64.0" fill="#54A24B"/>
+	<rect x="190" y="111.4" width="110" height="468.6" fill="#4C78A8"/>
+	<rect x="360" y="137.8" width="110" height="442.2" fill="#5A8FBE"/>
+	<rect x="530" y="402.3" width="110" height="177.7" fill="#6A9FC8"/>
+	<rect x="700" y="494.1" width="110" height="85.9" fill="#7AAFD2"/>
+	<rect x="870" y="549.9" width="110" height="30.1" fill="#8ABFDC"/>
 
-	<text x="335" y="114" text-anchor="middle" font-size="20" font-family="Consolas, Segoe UI, Arial, sans-serif" fill="#222">23.363s</text>
-	<text x="610" y="393" text-anchor="middle" font-size="20" font-family="Consolas, Segoe UI, Arial, sans-serif" fill="#222">9.109s</text>
-	<text x="885" y="508" text-anchor="middle" font-size="20" font-family="Consolas, Segoe UI, Arial, sans-serif" fill="#222">3.270s</text>
+	<text x="245" y="103" text-anchor="middle" font-size="19" font-family="Segoe UI, Arial, sans-serif" fill="#222">63.8s</text>
+	<text x="415" y="130" text-anchor="middle" font-size="19" font-family="Segoe UI, Arial, sans-serif" fill="#222">60.2s</text>
+	<text x="585" y="394" text-anchor="middle" font-size="19" font-family="Segoe UI, Arial, sans-serif" fill="#222">24.2s</text>
+	<text x="755" y="486" text-anchor="middle" font-size="19" font-family="Segoe UI, Arial, sans-serif" fill="#222">11.7s</text>
+	<text x="925" y="542" text-anchor="middle" font-size="19" font-family="Segoe UI, Arial, sans-serif" fill="#222">4.1s</text>
 
-	<text x="335" y="612" text-anchor="middle" font-size="22" font-family="Segoe UI, Arial, sans-serif" fill="#222">Result</text>
-	<text x="610" y="612" text-anchor="middle" font-size="22" font-family="Segoe UI, Arial, sans-serif" fill="#222">FAST</text>
-	<text x="885" y="612" text-anchor="middle" font-size="22" font-family="Segoe UI, Arial, sans-serif" fill="#222">MT</text>
+	<text x="245" y="612" text-anchor="middle" font-size="21" font-family="Segoe UI, Arial, sans-serif" fill="#222">Level 0</text>
+	<text x="415" y="612" text-anchor="middle" font-size="21" font-family="Segoe UI, Arial, sans-serif" fill="#222">Level 1</text>
+	<text x="585" y="612" text-anchor="middle" font-size="21" font-family="Segoe UI, Arial, sans-serif" fill="#222">Level 2</text>
+	<text x="755" y="612" text-anchor="middle" font-size="21" font-family="Segoe UI, Arial, sans-serif" fill="#222">Level 3</text>
+	<text x="925" y="612" text-anchor="middle" font-size="21" font-family="Segoe UI, Arial, sans-serif" fill="#222">Level 4</text>
 
 	<text x="600" y="650" text-anchor="middle" font-size="16" font-family="Segoe UI, Arial, sans-serif" fill="#555">
-		出典: Shos.LifeGame.Test/Shos.LifeGame.Test.cpp のコメント値（size=2048, times=100）
+		出典: ShosLifeGame_BenchmarkData.csv（Pattern=Gun_Gunstar, size=1000x1000, generations=1000）
 	</text>
 </svg>

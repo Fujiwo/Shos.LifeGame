@@ -8,10 +8,10 @@
 
 ## 作図手順(Excel)
 1. `ShosLifeGame_BenchmarkData.csv` をExcelで開く。
-2. 列 `configuration` と `time_seconds` を選択する。
+2. 列 `Optimization Level` と `Time (seconds)` を選択する。
 3. 「挿入」→「縦棒」→「集合縦棒」を選択する。
 4. グラフタイトルを次に変更する。  
-   `Shos.LifeGame ベンチ結果(Result / FAST / MT)`
+   `Shos.LifeGame ベンチ結果(Optimization Level 0〜4)`
 5. 縦軸タイトルを次に変更する。  
    `実行時間(秒)`
 6. データラベル(値)を表示する。
@@ -33,13 +33,13 @@ out_path = "Images/ShosLifeGame_Figure10_Benchmark.svg"
 df = pd.read_csv(csv_path)
 
 plt.figure(figsize=(7, 4))
-plt.bar(df["configuration"], df["time_seconds"])
-plt.title("Shos.LifeGame ベンチ結果(Result / FAST / MT)")
+plt.bar(df["Optimization Level"].astype(str), df["Time (seconds)"])
+plt.title("Shos.LifeGame ベンチ結果(Optimization Level 0〜4)")
 plt.xlabel("構成")
 plt.ylabel("実行時間(秒)")
 
-for i, v in enumerate(df["time_seconds"]):
-    plt.text(i, v, f"{v:.3f}s", ha="center", va="bottom")
+for i, v in enumerate(df["Time (seconds)"]):
+   plt.text(i, v, f"{v:.1f}s", ha="center", va="bottom")
 
 plt.tight_layout()
 plt.savefig(out_path, dpi=200)
@@ -49,8 +49,8 @@ plt.close()
 ## 記事へ反映する注記テンプレート
 図10のキャプションまたは本文に、以下を併記する。
 
-- 測定元: `Shos.LifeGame.Test/Shos.LifeGame.Test.cpp` のコメント値
-- 測定条件: 盤面サイズ `2048x2048`、反復 `100` 回
+- 測定元: `Articles(Japanese)/ShosLifeGame_BenchmarkData.csv`
+- 測定条件: Pattern `Gun_Gunstar`、盤面サイズ `1000x1000`、反復 `1000` 回
 - 注意: CPU・ビルド設定(Debug/Release)・環境差で値は変動する
 
 ## 推奨ファイル配置
