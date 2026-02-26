@@ -1,12 +1,12 @@
-# C++/Win32で学ぶ高速LifeGame実装：Shos.LifeGame徹底解説
+# C++/Win32で学ぶ高速LifeGame実装:Shos.LifeGame徹底解説
 
 ## はじめに
 ConwayのLifeGameは、ルール自体は驚くほど簡単なのに、実装に入った瞬間に「なぜこんなに遅いのか」という現実に直面する題材である。  
 同じ盤面、同じルールでも、データの持ち方やループの回し方、描画への渡し方が変わるだけで体感速度は大きく変わる。  
 本記事は `Shos.LifeGame` を題材に、実装を読む順番そのものを道しるべにしながら、どこで時間を使い、どこで短縮しているのかを追う。結論だけ先に言えば、この実装の核心は `USEBOOL` / `FAST` / `MT` / `AREA` / `BoardPainter` という5つの高速化要素が、別々のボトルネックに効くように配置されている点にある。
-まずは図1を見て、この記事が追う対象（実行画面と時間発展のイメージ）を共有してから各章へ進む。
+まずは図1を見て、この記事が追う対象(実行画面と時間発展のイメージ)を共有してから各章へ進む。
 
-> 対象読者: C++初級後半〜中級（`std::thread` と前処理マクロの基本を理解している読者）
+> 対象読者: C++初級後半〜中級(`std::thread` と前処理マクロの基本を理解している読者)
 
 #### 図1
 ![図1 Shos.LifeGame 実行画面](./Images/ShosLifeGame_Figure01_Overview.svg)
@@ -30,7 +30,7 @@ LifeGameの更新規則は、死セルの周囲8近傍に生セルがちょう�
 #### 図2
 ![図2 LifeGame ルール図](./Images/ShosLifeGame_Figure02_Rules.svg)
 
-**図2. LifeGameの更新ルール（3x3近傍）**  
+**図2. LifeGameの更新ルール(3x3近傍)**  
 中心セルの次状態は8近傍の生セル数で決まり、誕生と生存の条件が分かれる。
 
 ---
@@ -51,12 +51,12 @@ LifeGameの更新規則は、死セルの周囲8近傍に生セルがちょう�
 ---
 
 ## 3. パターンファイル形式とCellDataの読み解き
-### 3.1 `.lif`（Life 1.05）形式
+### 3.1 `.lif`(Life 1.05)形式
 `.lif` は、見た目に近い形でセル配置を行テキストとして持つ形式である。`Shos.LifeGame` の実装では、まず `#` で始まるコメント行を取り除き、次に行幅を揃えてから、生セル `*` と死セル `.` の内部表現へ連結する。  
 この手順の利点は、ファイルを目で追いやすい点にある。形式が素直なので、パターンの意図を理解しながらデータ化できるのが `.lif` の強みである。
 
-### 3.2 `.rle`（Run Length Encoding）形式
-`.rle` は、同じ状態が続く区間を圧縮して書く形式である。実装側では最初にヘッダ（`x=...`, `y=...`）からサイズを取り出し、その後に本文の `b` / `o` / `$` / `!` を展開して盤面データへ戻す。  
+### 3.2 `.rle`(Run Length Encoding)形式
+`.rle` は、同じ状態が続く区間を圧縮して書く形式である。実装側では最初にヘッダ(`x=...`, `y=...`)からサイズを取り出し、その後に本文の `b` / `o` / `$` / `!` を展開して盤面データへ戻す。  
 人間にとってはやや記号的だが、大きなパターンをコンパクトに扱えるため、配布や共有の実用性が高い形式である。
 `.lif` と `.rle` の差を視覚で押さえるには、図4を見比べるのが最短である。
 
@@ -90,7 +90,7 @@ Gun/Oscillator/Spaceship などのカテゴリで、用途に応じたパター�
 
 ## 4. データ構造と更新処理の基礎
 ### 4.1 `Board` と `BitCellSet`
-既定構成（`USEBOOL` 無効）では、`Board` は `BitCellSet` を継承して1bit/セルで盤面を保持する。これによりメモリ効率が高く、後段の描画処理へビット列を渡しやすくなる。  
+既定構成(`USEBOOL` 無効)では、`Board` は `BitCellSet` を継承して1bit/セルで盤面を保持する。これによりメモリ効率が高く、後段の描画処理へビット列を渡しやすくなる。  
 一方で `USEBOOL` を有効化すると、`bool**` を使う別実装へ切り替わる。こちらは理解しやすさに利点があるが、表現密度や変換コストの観点ではトレードオフが生まれる。
 
 ### 4.2 `Game::Next` と `Game::NextPart`
@@ -119,7 +119,7 @@ Gun/Oscillator/Spaceship などのカテゴリで、用途に応じたパター�
 ## 5. 高速化テクニック5要素の実装読解
 第4章までで見た更新パイプラインに、どの要素がどこで効くのかを順に重ねていく。ここで重要なのは、「最適化は万能な加速ボタンではなく、効く場所が異なる部品である」という見方である。
 
-### 5.1 USEBOOL
+### 5.1 USEBOOL ("FALSE" のとき: ビット演算とビットパターン転送による描画)
 ```cpp
 //#define USEBOOL // Boolean enabled
 #if defined(USEBOOL)
@@ -129,9 +129,9 @@ class Board final : public BitCellSet {};
 #endif
 ```
 `USEBOOL` は盤面の保持形式を切り替えるための分岐で、ビット演算を減らして実装理解をしやすくする余地がある。その一方で、表現密度が下がるためメモリ使用量が増えやすく、描画側で `GetBits()` を使うときの変換コストが目立つ場面も出てくる。
-速度面では、`USEBOOL` を FALSE（未定義）にして、 `BitCellSet` を使うほうが有利になる。盤面の更新がビット演算となり、また、描画がビット列の転送（`GetBits()` 経由） で行えるためである。もちろん、メモリーの使用量も大幅に減る。
+速度面では、`USEBOOL` を FALSE(未定義)にして、 `BitCellSet` を使うほうが有利になる。盤面の更新がビット演算となり、また、描画がビット列の転送(`GetBits()` 経由) で行えるためである。もちろん、メモリーの使用量も大幅に減る。
 
-### 5.2 FAST
+### 5.2 FAST (直接ループ)
 ```cpp
 #if defined(FAST)
 for (Point p = start; p.y < endY; p.y++)
@@ -143,7 +143,7 @@ Utility::ForEach(Rect(start, size), [&](const Point& p) { Set(p, pattern[idx++])
 ```
 `FAST` は、汎用反復よりも直接ループを優先することで、呼び出しオーバーヘッドを抑える方針である。実行速度には効きやすい反面、コードの重複が増えやすく、抽象化レベルは下がるため保守性とのバランス判断が必要になる。
 
-### 5.3 MT
+### 5.3 MT (マルチスレッド)
 ```cpp
 ThreadUtility::ForEach(area.leftTop.y, areaRightBottom.y,
     [=](Integer minY, Integer maxY, unsigned int index) {
@@ -152,14 +152,14 @@ ThreadUtility::ForEach(area.leftTop.y, areaRightBottom.y,
 ```
 `MT` は更新領域をY方向に分割し、`NextPart` を並列実行してスループットを上げる要素である。とくに盤面が大きい条件では有効だが、同期やスレッド管理のコストがあるため、小さな盤面では期待した伸びが出ないこともある。
 
-### 5.4 AREA
+### 5.4 AREA (走査領域の限定)
 ```cpp
 const auto area = mainBoard->GetArea();
 NextPart(area.leftTop, area.RightBottom());
 ```
 `AREA` は活動領域だけを更新対象にすることで、死セルばかりの領域を計算から外す考え方である。疎なパターンでは計算量を大きく減らせるが、その効果を支えるために領域管理ロジックは複雑になり、検証時の観点も増える。
 
-### 5.5 描画高速化（`ShosLifeGameBoardPainter.h`）
+### 5.5 描画高速化(`ShosLifeGameBoardPainter.h`)
 `USEBOOL` が無効の既定構成では、`Board` は `BitCellSet` 派生として `UnitInteger* cells` を持ち、更新で書き換えたビット列を `GetBits()` で直接取り出せる。`BoardPainter` はそのポインタを `BITMAP::bmBits` に渡して `CreateBitmapIndirect` を作成し、最後に `BitBlt` で画面へ転送する。  
 この流れの本質は、更新結果を別形式へ組み替えずに描画へ橋渡ししている点にある。ピクセル単位の手作業ループを避けられるため、描画コストを抑えやすくなる。ただし実装は1bpp/GDI前提なので、可搬性よりも速度寄りの選択だと捉えるのが適切である。
 
@@ -194,7 +194,7 @@ return ::CreateBitmapIndirect(&bitmap);
 比較では、1回につき切り替える要素を1つに限定し、盤面サイズ・初期パターン・世代数を固定する。また Debug と Release を混在させると解釈が曖昧になるため、評価は同一ビルド条件で揃えるのが前提である。
 
 ### 6.2 指標
-主要指標は、世代/秒（FPS相当）と総実行時間である。可能であればメモリ使用量も併記すると、速度だけでなく副作用も含めた比較になる。
+主要指標は、世代/秒(FPS相当)と総実行時間である。可能であればメモリ使用量も併記すると、速度だけでなく副作用も含めた比較になる。
 
 ### 6.3 結果の読み解き
 結果を読むときは、条件依存を先に意識する。小盤面では `MT` の利得が出にくく、疎なパターンでは `AREA` が効きやすい一方、どの要素も常に最速を保証するわけではない。
@@ -211,9 +211,9 @@ return ::CreateBitmapIndirect(&bitmap);
 
 第6章では、まずこの値を「結論先出し」の成果例として受け取り、その後に条件と解釈を重ねる。
 
-| 構成 | 実行時間 | Result比（高速化倍率） |
+| 構成 | 実行時間 | Result比(高速化倍率) |
 |---|---:|---:|
-| Result（ベース） | 23.363s | 1.00x |
+| Result(ベース) | 23.363s | 1.00x |
 | FAST | 9.109s | 約2.56x |
 | MT | 3.270s | 約7.15x |
 
@@ -223,9 +223,9 @@ return ::CreateBitmapIndirect(&bitmap);
 #### 図10
 ![図10 Shos.LifeGame ベンチ結果](./Images/ShosLifeGame_Figure10_Benchmark.svg)
 
-**図10. Shos.LifeGame ベンチ結果（Result / FAST / MT）**  
-`Shos.LifeGame.Test/Shos.LifeGame.Test.cpp` に記載されたコメント値（Result: 23.363s, FAST: 9.109s, MT: 3.270s）をもとに作成。  
-測定条件は盤面サイズ `2048x2048`、反復 `100` 回。CPU・ビルド設定（Debug/Release）・実行環境により結果は変動する。
+**図10. Shos.LifeGame ベンチ結果(Result / FAST / MT)**  
+`Shos.LifeGame.Test/Shos.LifeGame.Test.cpp` に記載されたコメント値(Result: 23.363s, FAST: 9.109s, MT: 3.270s)をもとに作成。  
+測定条件は盤面サイズ `2048x2048`、反復 `100` 回。CPU・ビルド設定(Debug/Release)・実行環境により結果は変動する。
 
 ---
 
@@ -235,7 +235,7 @@ return ::CreateBitmapIndirect(&bitmap);
 
 ---
 
-## 参考実装（本文で言及）
+## 参考実装(本文で言及)
 - `Shos.LifeGame/ShosLifeGame.h`
 - `Shos.LifeGame/ShosLifeGameBoardPainter.h`
 - `Shos.LifeGame/Shos.LifeGame.cpp`
