@@ -1,4 +1,4 @@
-﻿#include "../Shos.LifeGame/ShosLifeGame.h"
+#include "../Shos.LifeGame/ShosLifeGame.h"
 #include "../Shos.LifeGame/ShosStopwatch.h"
 #include <thread>
 #include <vector>

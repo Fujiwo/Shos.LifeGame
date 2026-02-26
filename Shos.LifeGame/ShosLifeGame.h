@@ -1,9 +1,9 @@
 #pragma once
 
-//#define USEBOOL // Boolean enabled
-#define FAST    // Fast loops enabled
-#define MT      // Multi-threading enabled
-#define AREA    // Area enabled
+#define USEBOOL // Boolean enabled
+//#define FAST    // Fast loops enabled
+//#define MT      // Multi-threading enabled
+//#define AREA    // Area enabled
 
 #include <string>
 #include <functional>
