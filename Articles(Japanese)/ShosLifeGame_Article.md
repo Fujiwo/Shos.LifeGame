@@ -175,7 +175,7 @@ Gun/Oscillator/Spaceship などのカテゴリで、用途に応じたパター�
 
 ### 5.1 USEBITS (ビット演算とビットパターン転送による描画)
 ```cpp
-//#define USEBITS // Bits enabled
+#define USEBITS // Bits enabled
 #if !defined(USEBITS)
 class Board final { bool** cells; };
 #else
@@ -275,7 +275,7 @@ return ::CreateBitmapIndirect(&bitmap);
 `Shos.LifeGame/ShosLifeGame.h` の頭の方にある下記の各 #define をコメントアウトしてビルドしなおすことで、切り替えることができる。
 
 ```cpp
-//#define USEBITS // Bits enabled
+#define USEBITS // Bits enabled
 #define FAST    // Fast loops enabled
 #define MT      // Multi-threading enabled
 #define AREA    // Area enabled

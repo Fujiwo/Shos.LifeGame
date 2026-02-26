@@ -121,7 +121,7 @@ Gun/Oscillator/Spaceship などのカテゴリで、用途に応じたパター�
 
 ### 5.1 USEBITS (ビット演算とビットパターン転送による描画)
 ```cpp
-//#define USEBITS // Bits enabled
+#define USEBITS // Bits enabled
 #if !defined(USEBITS)
 class Board final { bool** cells; };
 #else
