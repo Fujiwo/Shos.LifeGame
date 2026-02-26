@@ -1,6 +1,6 @@
 # C++/Win32で学ぶ高速ライフゲーム実装
 
-<img src="https://github.com/Fujiwo/Shos.LifeGame/blob/main/Articles(Japanese)/Images/lifegame01.png?raw=true" alt="Life Game"></img>
+![Life Game](https://qiita-image-store.s3.ap-northeast-1.amazonaws.com/0/35793/6f3648cb-ace2-4b2b-a0c2-f08a5429eebc.png)
 
 - [実行のイメージ | YouTube](https://youtu.be/ny-VKZEAVkg)
 
