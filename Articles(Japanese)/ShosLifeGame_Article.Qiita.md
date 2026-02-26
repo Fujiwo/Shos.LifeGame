@@ -1,4 +1,4 @@
-# C++/Win32で学ぶ高速ライフゲーム実装: Shos.LifeGame徹底解説
+# C++/Win32で学ぶ高速ライフゲーム実装
 
 <img src="https://github.com/Fujiwo/Shos.LifeGame/blob/main/Articles(Japanese)/Images/lifegame01.png?raw=true" alt="Life Game"></img>
 
