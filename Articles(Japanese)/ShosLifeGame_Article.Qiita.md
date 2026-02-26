@@ -75,7 +75,7 @@
 
 #### 図3: 主要クラスの関係
 `MainWindow` が更新を駆動し、`Game` が盤面状態を管理、`BoardPainter` が描画を担当する。
-<img src="https://raw.githubusercontent.com/Fujiwo/Shos.LifeGame/0b8c8159d4726cb7bac51249b6c6112e0778b79c/Articles(Japanese)/Images/ShosLifeGame_Figure02_Rules.svg" alt="図3 クラス関係図"></img>
+<img src="https://raw.githubusercontent.com/Fujiwo/Shos.LifeGame/refs/heads/main/Articles(Japanese)/Images/ShosLifeGame_Figure03_ClassDiagram.svg" alt="図3 クラス関係図"></img>
 
 ---
 
