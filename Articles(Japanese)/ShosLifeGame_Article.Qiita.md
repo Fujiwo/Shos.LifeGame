@@ -17,11 +17,35 @@
 - 実際のソースコード:
   - [Shos.LifeGame | GitHub](https://github.com/Fujiwo/Shos.LifeGame)
 
+
 まずはライフゲームの実行画面のイメージをつかんでほしい。
 
 #### 図1: 世代更新と描画を繰り返しながら、パターンが時間発展する様子を示す
 <img src="https://raw.githubusercontent.com/Fujiwo/Shos.LifeGame/refs/heads/main/Articles(Japanese)/Images/ShosLifeGame_Figure01_Overview.svg"  alt="図1 Shos.LifeGame 実行画面イメージ"></img>
 ※ 実際の実行画面とは異なる
+
+### 最適化の結果
+
+結果を先に述べておくと、Shos.LifeGame で行った最適化により次のように高速化することができた:
+
+| 測定条件 | |
+|----|----|
+| パターン | `Gun_Gunstar` |
+| 盤面サイズ | `1000x1000 (1,000,000セル)` |
+| 世代数 | `1000` 世代 |
+
+| 最適化 | FPS (Frame Per Second) | FPS倍率 |
+|----| ----:| ----:|
+| 前 | 16  | 1.00 |
+| 後 | 244 | 15.25 |
+
+| 測定環境 | |
+|----|----|
+| PC | DELL ノートPC XPS 13 9310 |
+| メモリー | 16GB |
+| CPU | 11th Gen Intel Core i7 2.92GHz 4コア (8論理プロセッサー) |
+| GPU | Intel Iris Xe グラフィックス |
+| OS | Windows 11 |
 
 ---
 
@@ -245,7 +269,8 @@ return ::CreateBitmapIndirect(&bitmap);
 結果を読むときは、条件依存を先に意識する。小盤面では `MT` の利得が出にくく、疎なパターンでは `AREA` が効きやすい一方、どの要素も常に最速を保証するわけではない。
 
 ### 6.4 最新ベンチ結果を「高速化の成果」として示す
-`Articles(Japanese)/ShosLifeGame_BenchmarkData.csv` には、Optimization Level 0〜4の実測値が記録されている。
+
+それぞれの最適化 (Level 0〜4) による高速化の結果は次の通りである:
 
 | Level | USEBITS | FAST | MT | AREA | 実行時間 | FPS | FPS倍率 |
 |---:|:---:|:---:|:---:|:---:|---:|---:|---:|
@@ -258,7 +283,7 @@ return ::CreateBitmapIndirect(&bitmap);
 ただし、これは、あくまで共有された実行環境での結果であり、CPU、ビルド設定、実行条件の違いで値は変わる。
 
 #### 図10: Shos.LifeGame ベンチ結果(Optimization Level 0〜4)
-測定条件はPattern `Gun_Gunstar`、盤面サイズ `1000x1000 (1,000,000セル)`、反復 `1000` 回。ビルド設定は、Release。CPU・実行環境により結果は変動する。
+測定条件はPattern `Gun_Gunstar`、盤面サイズ `1000x1000 (1,000,000セル)`、世代数 `1000` 世代。ビルド設定は、Release。CPU・実行環境により結果は変動する。
 <img src="https://raw.githubusercontent.com/Fujiwo/Shos.LifeGame/0b8c8159d4726cb7bac51249b6c6112e0778b79c/Articles(Japanese)/Images/ShosLifeGame_Figure10_Benchmark.svg" alt="図10 Shos.LifeGame ベンチ結果"></img>
 
 
