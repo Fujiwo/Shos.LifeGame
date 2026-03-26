@@ -63,3 +63,21 @@ The program supports the following two pattern file formats:
 - [RLE (*.RLE)](https://en.wikipedia.org/wiki/Run-length_encoding)
 
 By default, the CellData folder contains 46 pattern files. To call each pattern, input '0' to '9', 'a' to 'z', 'A' to 'J'. If you press a key that is not assigned a pattern, a random pattern will be generated.
+
+## Authors
+
+Fujio Kojima: a software developer in Japan
+* Microsoft MVP for Development Tools - Visual C# (Jul. 2005 - Dec. 2014)
+* Microsoft MVP for .NET (Jan. 2015 - Oct. 2015)
+* Microsoft MVP for Visual Studio and Development Technologies (Nov. 2015 - Jun. 2018)
+* Microsoft MVP for Developer Technologies (Nov. 2018 - Jun. 2026)
+* [MVP Profile](https://mvp.microsoft.com/en-US/mvp/profile/4185d172-3c9a-e411-93f2-9cb65495d3c4 "MVP Profile")
+* [Blog (Japanese)](http://wp.shos.info "Blog (Japanese)")
+* [Web Site (Japanese)](http://www.shos.info "Web Site (Japanese)")
+* [Twitter](https://twitter.com/Fujiwo)
+* [Instagram](https://www.instagram.com/fujiwo/)
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.txt) file for details.
+
