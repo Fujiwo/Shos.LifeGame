@@ -371,6 +371,19 @@ void PatternIsCentered()
     CHECK_EQ(Shift(glider, 6, 6), GetAliveCells(board));
 }
 
+void AreaSurroundsPattern()
+{
+#if defined(AREA)
+    // Review 3.7: the area of a cleared board must start at the center, not at the left-top corner.
+    Board board(Size(32, 32));
+    CHECK(board.Set(Pattern(_T("glider"), ".*...****", 3U)));
+    const auto area = board.GetArea();
+    CHECK(!area.IsIn(Point(0, 0)));
+    for (const auto& [x, y] : GetAliveCells(board))
+        CHECK(area.IsIn(Point(x, y)));
+#endif // AREA
+}
+
 void TooLargePatternIsRejected()
 {
     Board board(Size(8, 8));
@@ -412,23 +425,12 @@ void ResetRestartsGeneration()
 // The bits are passed to a monochrome DDB (ShosLifeGameBoardPainter.h).
 // A DDB row is WORD-aligned and its most significant bit is the leftmost pixel.
 
-#if !defined(USEBITS)
-// Review 3.2: ~Board() releases bitCellSet with delete[] (undefined behavior, crashes in practice).
-// The game is not deleted until the issue is fixed. Remove this when 3.2 is fixed.
-#define SHOS_TEST_LEAK_GAME_WITH_BITS
-#endif // !USEBITS
-
 template <typename TAction>
 void WithBits(const Size& size, const Cells& cells, TAction action)
 {
     auto game = std::make_unique<Game>(size);
     Place(*game, cells);
-#if defined(SHOS_TEST_LEAK_GAME_WITH_BITS)
-    const auto bits = game.release()->GetBoard().GetBits();
-#else // SHOS_TEST_LEAK_GAME_WITH_BITS
-    const auto bits = game->GetBoard().GetBits();
-#endif // SHOS_TEST_LEAK_GAME_WITH_BITS
-    action(bits);
+    action(game->GetBoard().GetBits());
 }
 
 void BitmapLeftmostPixelIsMostSignificantBit()
@@ -593,6 +595,7 @@ int Run()
         { "OutsideOfBoardIsDead"                     , Expect::Pass    , ""   , OutsideOfBoardIsDead                    },
         { "GliderVanishesAtCorner"                   , Expect::Pass    , ""   , GliderVanishesAtCorner                  },
         { "PatternIsCentered"                        , Expect::Pass    , ""   , PatternIsCentered                       },
+        { "AreaSurroundsPattern"                     , Expect::Pass    , ""   , AreaSurroundsPattern                    },
         { "TooLargePatternIsRejected"                , Expect::Pass    , ""   , TooLargePatternIsRejected               },
         { "RandomBoardMatchesReference"              , Expect::Pass    , ""   , RandomBoardMatchesReference             },
         { "BitmapLeftmostPixelIsMostSignificantBit"  , Expect::KnownBug, "3.5", BitmapLeftmostPixelIsMostSignificantBit },
@@ -613,6 +616,7 @@ int Run()
         { "BundledCordershipStartsWithCells"         , Expect::KnownBug, "3.4", BundledCordershipStartsWithCells        },
     };
 
+    std::cout << std::unitbuf; // Keep the output even if a test crashes.
     std::cout << "Configuration: " << GetConfiguration() << "\n";
 
     auto passed = 0, failed = 0, expectedFailures = 0, unexpectedPasses = 0;

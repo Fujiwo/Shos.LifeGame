@@ -22,7 +22,7 @@ class Window
 
 public:
     HWND GetHandle() const
-    { return this == nullptr ? nullptr : handle; }
+    { return handle; }
 
     Window() : handle(nullptr)
     {}

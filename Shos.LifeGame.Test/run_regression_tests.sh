@@ -3,7 +3,6 @@
 #
 # Usage: Shos.LifeGame.Test/run_regression_tests.sh [--asan]
 #   --asan  Build with AddressSanitizer and UndefinedBehaviorSanitizer (slow: about a minute per combination).
-#           Combinations without USEBITS fail with memory leaks until review 3.2 (Board) is fixed.
 #
 # Requires g++ (C++20). Works on Linux and WSL.
 

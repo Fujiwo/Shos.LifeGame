@@ -1,6 +1,11 @@
 #pragma once
 
+#include <algorithm>
+#include <cassert>
+#include <cctype>
 #include <filesystem>
+#include <functional>
+#include <iterator>
 #include <fstream>
 #include <string>
 #include <sstream>

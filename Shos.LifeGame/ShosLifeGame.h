@@ -483,6 +483,9 @@ public:
     virtual ~BitCellSet()
     { delete[] cells; }
 
+    BitCellSet(const BitCellSet&)            = delete;
+    BitCellSet& operator=(const BitCellSet&) = delete;
+
     bool Get(const Point& point) const
     {
         std::tuple<UnsignedInteger, Byte> bitIndex;
@@ -678,9 +681,14 @@ public:
 
     ~Board()
     {
-        delete[] bitCellSet;
-        delete[] cells     ;
+        delete bitCellSet;
+        for (auto y = 0; y < size.cy; y++)
+            delete[] cells[y];
+        delete[] cells;
     }
+
+    Board(const Board&)            = delete;
+    Board& operator=(const Board&) = delete;
 
     bool Set(const Pattern& pattern)
     {
@@ -775,7 +783,7 @@ private:
             ::memset(cells[y], 0, sizeof(bool) * size.cx);
 
 #if defined(AREA)
-        area = Rect(Point(std::min(0, size.cx / 2 - 1), std::min(0, size.cy / 2 - 1)), Size(std::min(size.cx, 3), std::min(size.cy, 3)));
+        area = BitCellSet::GetDefaultArea(GetRect());
 #endif // AREA
     }
 
@@ -825,7 +833,7 @@ public:
         Utility::ForEach(GetRect(), action);
 #endif // AREA
     }
-#endif !FAST
+#endif // !FAST
 
     UnsignedInteger GetAliveNeighborCount(const Point& point) const
     {
@@ -899,6 +907,9 @@ public:
         delete mainBoard;
     }
 
+    Game(const Game&)            = delete;
+    Game& operator=(const Game&) = delete;
+
     void Next()
     {
 
@@ -915,7 +926,7 @@ public:
 #if defined(AREA)
         ResetAreas();
 
-        ThreadUtility::ForEach(area.leftTop.y, areaRightBottom.y, [=](Integer minimum, Integer maximum, unsigned int index) {
+        ThreadUtility::ForEach(area.leftTop.y, areaRightBottom.y, [=, this](Integer minimum, Integer maximum, unsigned int index) {
             NextPart(Point(area.leftTop.x, minimum), Point(areaRightBottom.x, maximum), areas[index]);
         });
 
@@ -923,7 +934,7 @@ public:
         subBoard->SetArea(newArea);
 
 #else // AREA
-        ThreadUtility::ForEach(area.leftTop.y, areaRightBottom.y, [=](Integer minimum, Integer maximum) {
+        ThreadUtility::ForEach(area.leftTop.y, areaRightBottom.y, [=, this](Integer minimum, Integer maximum) {
             NextPart(Point(area.leftTop.x, minimum), Point(areaRightBottom.x, maximum));
         });
 #endif // AREA
