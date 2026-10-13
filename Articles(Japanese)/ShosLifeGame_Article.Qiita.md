@@ -158,7 +158,7 @@ Gun/Oscillator/Spaceship などのカテゴリで、用途に応じたパター�
 ## 4. データ構造と更新処理の基礎
 ### 4.1 `Board` と `BitCellSet`
 `USEBITS` を有効化した構成では、`Board` は `BitCellSet` を継承して1bit/セルで盤面を保持する。これによりメモリ効率が高く、後段の描画処理へビット列を渡しやすくなる。  
-一方で `USEBITS` を無効(未定義)にすると、`bool**` を使う別実装へ切り替わる。こちらは理解しやすさに利点があるが、表現密度や変換コストの観点ではトレードオフが生まれる。
+一方で `USEBITS` を無効(未定義)にすると、行ごとの `bool` 配列 (`std::vector<std::unique_ptr<bool[]>>`) を使う別実装へ切り替わる。こちらは理解しやすさに利点があるが、表現密度や変換コストの観点ではトレードオフが生まれる。
 
 ### 4.2 `Game::Next` と `Game::NextPart`
 世代更新の入口は `Game::Next` で、ここから実際の更新処理が `NextPart` へ流れる。`MT` が有効ならY方向に分割して並列実行され、`AREA` が有効なら活動領域に処理対象を絞り込み、`FAST` が有効なら直接ループ中心で反復コストを抑える。  
@@ -194,12 +194,12 @@ Gun/Oscillator/Spaceship などのカテゴリで、用途に応じたパター�
 ```cpp
 #define USEBITS // Bits enabled
 #if !defined(USEBITS)
-class Board final { bool** cells; };
+class Board final { std::vector<std::unique_ptr<bool[]>> cells; };
 #else
 class Board final : public BitCellSet {};
 #endif
 ```
-`USEBITS` は盤面の保持形式を切り替えるための分岐で、定義した側ではビット演算を中心に高密度な表現を使える。その一方で、未定義の側の `bool**` 実装は理解しやすさに利点がある反面、表現密度の低下によりメモリ使用量が増えやすく、描画側で `GetBits()` を使う際の変換コストが目立つ場面も出てくる。
+`USEBITS` は盤面の保持形式を切り替えるための分岐で、定義した側ではビット演算を中心に高密度な表現を使える。その一方で、未定義の側の `bool` 配列による実装は理解しやすさに利点がある反面、表現密度の低下によりメモリ使用量が増えやすく、描画側で `GetBits()` を使う際の変換コストが目立つ場面も出てくる。
 速度面では、`USEBITS` を定義して `BitCellSet` を使うほうが有利になる。盤面の更新がビット演算となり、また、描画がビット列の転送(`GetBits()` 経由) で行えるためである。もちろん、メモリーの使用量も大幅に減る。
 
 ### 5.2 FAST (直接ループ)
