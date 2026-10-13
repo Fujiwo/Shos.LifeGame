@@ -473,10 +473,17 @@ void LifSkipsBangCommentLines()
     CHECK_EQ((std::vector<std::string>{ ".*", "**" }), rows);
 }
 
-void LifSkipsBlankLines()
+void LifSkipsLeadingAndTrailingBlankLines()
 {
     const auto rows = ReadRows("blank.lif", "#Life 1.05\n\n.*\n**\n\n");
     CHECK_EQ((std::vector<std::string>{ ".*", "**" }), rows);
+}
+
+void LifInnerBlankLineIsDeadRow()
+{
+    // e.g. 13_engine_Cordership.lif
+    const auto rows = ReadRows("inner.lif", "#Life 1.05\n.*\n\n**\n");
+    CHECK_EQ((std::vector<std::string>{ ".*", "..", "**" }), rows);
 }
 
 void LifUpperCaseExtension()
@@ -486,6 +493,32 @@ void LifUpperCaseExtension()
     folder.Write("glider2.life", "#Life 1.05\n.*\n..*\n***\n");
     PatternSet patternSet(ToTString(folder.GetPath()));
     CHECK_EQ(size_t(2), patternSet.GetSize());
+}
+
+void LifMultipleBlocks()
+{
+    // "#P x y" places the following lines at (x, y).
+    const auto rows = ReadRows("blocks.lif", "#Life 1.05\n#P -2 -1\n**\n#P 1 1\n*\n.*\n");
+    CHECK_EQ((std::vector<std::string>{ "**...", ".....", "...*.", "....*" }), rows);
+}
+
+void LifCrLf()
+{
+    const auto rows = ReadRows("crlf.lif", "#Life 1.05\r\n.*\r\n**\r\n");
+    CHECK_EQ((std::vector<std::string>{ ".*", "**" }), rows);
+}
+
+void PatternsAreSortedByFileName()
+{
+    TemporaryFolder folder;
+    for (const auto name : { "b.lif", "C.rle", "A.LIF", "a.rle", "c.lif" })
+        folder.Write(name, std::string(name).ends_with("rle") ? "x = 1, y = 1\no!\n" : "*\n");
+    PatternSet patternSet(ToTString(folder.GetPath()));
+    std::vector<tstring> names;
+    for (size_t index = 0; index < patternSet.GetSize(); index++)
+        names.push_back(patternSet[index].GetName());
+    // Life 1.05 files first, then RLE files. Each group is sorted case-insensitively.
+    CHECK((names == std::vector<tstring>{ ToTString("A"), ToTString("b"), ToTString("c"), ToTString("a"), ToTString("C") }));
 }
 
 void RleBasic()
@@ -513,6 +546,12 @@ void RleRunOfLineBreaks()
     CHECK_EQ((std::vector<std::string>{ "**", "..", "..", "**" }), rows);
 }
 
+void RleCrLf()
+{
+    const auto rows = ReadRows("crlf.rle", "#N name\r\n \r\nx = 3, y = 2\r\n3o$\r\nbo!\r\n");
+    CHECK_EQ((std::vector<std::string>{ "***", ".*." }), rows);
+}
+
 void RleWithoutTerminator()
 {
     const auto rows = ReadRows("open.rle", "x = 2, y = 2\n2o$bo\n");
@@ -525,8 +564,8 @@ void BundledPatternsAreAllLoaded()
 {
     size_t fileCount = 0;
     for (const auto& entry : std::filesystem::directory_iterator(cellDataFolder)) {
-        const auto extension = entry.path().extension();
-        if (extension == ".lif" || extension == ".rle")
+        const auto extension = String::ToLower(entry.path().extension().string());
+        if (extension == ".lif" || extension == ".life" || extension == ".rle")
             fileCount++;
     }
     CHECK(fileCount > 0);
@@ -602,18 +641,23 @@ int Run()
         { "BitmapRowIsWordAlignedPackedBits"         , Expect::KnownBug, "3.6", BitmapRowIsWordAlignedPackedBits        },
         { "LifBasic"                                 , Expect::Pass    , ""   , LifBasic                                },
         { "LifNameIsFileStem"                        , Expect::Pass    , ""   , LifNameIsFileStem                       },
-        { "LifSkipsBangCommentLines"                 , Expect::KnownBug, "3.4", LifSkipsBangCommentLines                },
-        { "LifSkipsBlankLines"                       , Expect::KnownBug, "3.4", LifSkipsBlankLines                      },
-        { "LifUpperCaseExtension"                    , Expect::KnownBug, "3.12", LifUpperCaseExtension                  },
+        { "LifSkipsBangCommentLines"                 , Expect::Pass    , ""   , LifSkipsBangCommentLines                },
+        { "LifSkipsLeadingAndTrailingBlankLines"     , Expect::Pass    , ""   , LifSkipsLeadingAndTrailingBlankLines    },
+        { "LifInnerBlankLineIsDeadRow"               , Expect::Pass    , ""   , LifInnerBlankLineIsDeadRow              },
+        { "LifUpperCaseExtension"                    , Expect::Pass    , ""   , LifUpperCaseExtension                   },
+        { "LifMultipleBlocks"                        , Expect::Pass    , ""   , LifMultipleBlocks                       },
+        { "LifCrLf"                                  , Expect::Pass    , ""   , LifCrLf                                 },
+        { "PatternsAreSortedByFileName"              , Expect::Pass    , ""   , PatternsAreSortedByFileName             },
         { "RleBasic"                                 , Expect::Pass    , ""   , RleBasic                                },
         { "RleMultiDigitCountAndMultipleLines"       , Expect::Pass    , ""   , RleMultiDigitCountAndMultipleLines      },
         { "RleUpperCaseTags"                         , Expect::Pass    , ""   , RleUpperCaseTags                        },
-        { "RleRunOfLineBreaks"                       , Expect::KnownBug, "3.3", RleRunOfLineBreaks                      },
-        { "RleWithoutTerminator"                     , Expect::KnownBug, "3.3", RleWithoutTerminator                    },
+        { "RleRunOfLineBreaks"                       , Expect::Pass    , ""   , RleRunOfLineBreaks                      },
+        { "RleCrLf"                                  , Expect::Pass    , ""   , RleCrLf                                 },
+        { "RleWithoutTerminator"                     , Expect::Pass    , ""   , RleWithoutTerminator                    },
         { "BundledPatternsAreAllLoaded"              , Expect::Pass    , ""   , BundledPatternsAreAllLoaded             },
         { "BundledRleSizesMatchHeader"               , Expect::Pass    , ""   , BundledRleSizesMatchHeader              },
-        { "BundledOtcaMetapixelSizeMatchesHeader"    , Expect::KnownBug, "3.3", BundledOtcaMetapixelSizeMatchesHeader   },
-        { "BundledCordershipStartsWithCells"         , Expect::KnownBug, "3.4", BundledCordershipStartsWithCells        },
+        { "BundledOtcaMetapixelSizeMatchesHeader"    , Expect::Pass    , ""   , BundledOtcaMetapixelSizeMatchesHeader   },
+        { "BundledCordershipStartsWithCells"         , Expect::Pass    , ""   , BundledCordershipStartsWithCells        },
     };
 
     std::cout << std::unitbuf; // Keep the output even if a test crashes.

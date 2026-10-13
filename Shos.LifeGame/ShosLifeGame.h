@@ -274,11 +274,14 @@ private:
         {
             patterns.clear();
 
-            const auto           extension5 = ".lif";
-            std::vector<tstring> filePaths;
-            Shos::File::GetFilePaths(folderName, filePaths, extension5);
+            for (const auto extension5 : { ".lif", ".life" }) {
+                std::vector<tstring> filePaths;
+                Shos::File::GetFilePaths(folderName, filePaths, extension5);
 
-            Helper::Map<std::vector<tstring>, std::vector<Pattern>, tstring, Pattern>(filePaths, patterns, [&](tstring filePath) { return Read(filePath); });
+                std::vector<Pattern> patternsOfExtension;
+                Helper::Map<std::vector<tstring>, std::vector<Pattern>, tstring, Pattern>(filePaths, patternsOfExtension, [&](tstring filePath) { return Read(filePath); });
+                Helper::Connect<std::vector<Pattern>>(patterns, patternsOfExtension);
+            }
         }
 
         static std::string Adjust(std::string text, size_t width)
@@ -288,6 +291,19 @@ private:
         }
 
     private:
+        /// <summary>Cell lines placed at "#P x y". Lines before the first "#P" are placed at (0, 0).</summary>
+        struct Block
+        {
+            Point                    position;
+            std::vector<std::string> lines;
+
+            Integer GetWidth() const
+            { return Integer(Helper::Maximum<std::vector<std::string>, std::string, UnsignedInteger>(lines, [](const std::string& text) { return UnsignedInteger(text.length()); })); }
+
+            Integer GetHeight() const
+            { return Integer(lines.size()); }
+        };
+
         static Pattern Read(tstring filePath)
         {
             std::vector<std::string> lines;
@@ -296,20 +312,61 @@ private:
             std::vector<std::string> trimedLines;
             Helper::Map<std::vector<std::string>, std::vector<std::string>, std::string, std::string>(lines, trimedLines, [](std::string text) { return String::Trim(text); });
 
-            std::vector<std::string> filteredLines;
-            Helper::Filter<std::vector<std::string>, std::string>(trimedLines, filteredLines, [](const std::string& text) { return !text.starts_with('#'); });
+            std::vector<Block> blocks;
+            for (const auto& line : trimedLines) {
+                if (line.starts_with("#P")) {
+                    blocks.push_back(Block{ ReadPosition(line), {} });
+                } else if (!line.starts_with('#') && !line.starts_with('!')) { // '!': comment of the Plaintext format
+                    if (blocks.empty())
+                        blocks.push_back(Block{ Point(), {} });
+                    // An empty line is a row of dead cells, except at the beginning of a block.
+                    if (!line.empty() || !blocks.back().lines.empty())
+                        blocks.back().lines.push_back(line);
+                }
+            }
+            for (auto& block : blocks) {
+                while (!block.lines.empty() && block.lines.back().empty())
+                    block.lines.pop_back();
+            }
+            blocks.erase(std::remove_if(blocks.begin(), blocks.end(), [](const Block& block) { return block.lines.empty(); }), blocks.end());
 
-            if (filteredLines.size() == 0)
+            if (blocks.size() == 0)
                 return Pattern(_T(""), "", 0U);
 
-            const auto width = Helper::Maximum<std::vector<std::string>, std::string, UnsignedInteger>(filteredLines, [](const std::string& text) { return UnsignedInteger(text.length()); });
+            auto left   = blocks[0].position.x;
+            auto top    = blocks[0].position.y;
+            auto right  = left;
+            auto bottom = top;
+            for (const auto& block : blocks) {
+                left   = std::min(left  , block.position.x);
+                top    = std::min(top   , block.position.y);
+                right  = std::max(right , block.position.x + block.GetWidth ());
+                bottom = std::max(bottom, block.position.y + block.GetHeight());
+            }
 
-            std::vector<std::string> ajustedLines;
-            Helper::Map<std::vector<std::string>, std::vector<std::string>, std::string, std::string>(filteredLines, ajustedLines, [&](std::string text) { return Adjust(text, width); });
-
-            std::string pattern = Helper::Connect(ajustedLines);
+            const auto  width = UnsignedInteger(right - left);
+            std::string pattern(size_t(width) * size_t(bottom - top), '.');
+            for (const auto& block : blocks) {
+                for (Integer y = 0; y < block.GetHeight(); y++) {
+                    const auto& line = block.lines[size_t(y)];
+                    for (Integer x = 0; x < Integer(line.length()); x++) {
+                        if (line[size_t(x)] == '*')
+                            pattern[size_t(block.position.y - top + y) * width + size_t(block.position.x - left + x)] = '*';
+                    }
+                }
+            }
 
             return Pattern(Shos::File::GetStem(filePath), pattern, width);
+        }
+
+        /// <param name="line">"#P x y"</param>
+        static Point ReadPosition(const std::string& line)
+        {
+            std::istringstream stream(line.substr(2));
+            Point              position;
+            if (!(stream >> position.x >> position.y))
+                return Point();
+            return position;
         }
     };
 
@@ -359,7 +416,7 @@ private:
             std::string partPattern;
             size_t      count = 0U;
             for (size_t index = 0U; index < rlePattern.length(); index++) {
-                const auto  character = std::tolower(rlePattern[index]);
+                const auto  character = std::tolower(static_cast<unsigned char>(rlePattern[index]));
                 if (std::isdigit(character)) {
                     count = GetRleCount(rlePattern, index);
                 } else {
@@ -370,9 +427,11 @@ private:
                     case 'o':
                         partPattern.append(count == 0U ? 1U : count, '*');
                         break;
-                    case '$':
-                        AppendPartPattern(partPattern, width, pattern);
-                        partPattern.clear();
+                    case '$': // "n$" ends the line and adds (n - 1) empty lines.
+                        for (size_t line = 0U; line < (count == 0U ? 1U : count); line++) {
+                            AppendPartPattern(partPattern, width, pattern);
+                            partPattern.clear();
+                        }
                         break;
                     case '!':
                         AppendPartPattern(partPattern, width, pattern);
@@ -381,6 +440,8 @@ private:
                     count = 0U;
                 }
             }
+            if (!partPattern.empty()) // Without the terminator '!'
+                AppendPartPattern(partPattern, width, pattern);
             return pattern;
         }
 
@@ -398,9 +459,9 @@ private:
         {
             size_t count = 0U;
             size_t number = 0U;
-            for (; index < rlePattern.length(); number++) {
+            for (; index + number < rlePattern.length(); number++) {
                 const auto character = rlePattern[index + number];
-                if (std::isdigit(character)) {
+                if (std::isdigit(static_cast<unsigned char>(character))) {
                     count *= 10;
                     count += character - '0';
                 } else {
@@ -414,7 +475,7 @@ private:
 
         static std::tuple<UnsignedInteger, UnsignedInteger> GetRleSize(std::string rule)
         {
-            rule.erase(std::remove_if(rule.begin(), rule.end(), ::isspace), rule.end());
+            rule.erase(std::remove_if(rule.begin(), rule.end(), [](unsigned char character) { return std::isspace(character); }), rule.end());
 
             const auto tokens = String::Split(rule, ',');
             std::vector<std::string> trimedTokens;

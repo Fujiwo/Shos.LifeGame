@@ -71,70 +71,17 @@ public:
     }
 };
 
-class File final
-{
-public:
-    static bool GetFilePaths(tstring folderPath, std::vector<tstring>& filePaths, std::string extension)
-    {
-        using namespace std::filesystem;
-
-        filePaths.clear();
-        if (!is_directory(folderPath))
-            return false;
-
-        directory_iterator end;
-        std::error_code    err;
-
-        for (directory_iterator iterator(folderPath); iterator != end && !err; iterator.increment(err)) {
-            auto path = iterator->path();
-            if (path.extension() == extension)
-                filePaths.push_back(path
-#if defined(UNICODE) || defined(_UNICODE)
-                    .wstring()
-#else // UNICODE
-                    .string ()
-#endif // UNICODE
-                );
-        }
-        return !err;
-    }
-
-    static tstring GetStem(tstring filePath)
-    {
-        std::filesystem::path path = filePath;
-        return path.stem()
-#if defined(UNICODE) || defined(_UNICODE)
-            .wstring();
-#else // UNICODE
-            .string ();
-#endif // UNICODE
-    }
-
-    static bool Read(tstring fileName, std::vector<std::string>& lines)
-    {
-        std::ifstream stream(fileName);
-        if (!stream.is_open())
-            return false;
-
-        std::string line;
-        while (getline(stream, line))
-            lines.push_back(line);
-
-        return true;
-    }
-};
-
 class String final
 {
 public:
     static std::string Trim(std::string source)
     {
-        const std::string TRIM_CHARACTERS = " ";
+        const std::string TRIM_CHARACTERS = " \t\r\n";
 
         auto start    = source.find_first_not_of(TRIM_CHARACTERS);
         auto end      = source.find_last_not_of (TRIM_CHARACTERS);
-        return start == tstring::npos || end == tstring::npos ? source
-                                                              : source.substr(start, end - start + 1);
+        return start == std::string::npos || end == std::string::npos ? std::string()
+                                                                      : source.substr(start, end - start + 1);
     }
 
     static std::string Adjust(std::string text, char character, size_t width)
@@ -159,8 +106,71 @@ public:
         std::string result;
 
         result.resize(text.size());
-        std::transform(text.begin(), text.end(), result.begin(), tolower);
+        std::transform(text.begin(), text.end(), result.begin(), [](unsigned char character) { return char(std::tolower(character)); });
         return result;
+    }
+};
+
+class File final
+{
+public:
+    /// <summary>Gets the paths of the files whose extension matches (case-insensitive), sorted by file name.</summary>
+    static bool GetFilePaths(tstring folderPath, std::vector<tstring>& filePaths, std::string extension)
+    {
+        using namespace std::filesystem;
+
+        filePaths.clear();
+        if (!is_directory(folderPath))
+            return false;
+
+        directory_iterator end;
+        std::error_code    err;
+        std::vector<path>  paths;
+
+        for (directory_iterator iterator(folderPath); iterator != end && !err; iterator.increment(err)) {
+            const auto& path = iterator->path();
+            if (String::ToLower(path.extension().string()) == String::ToLower(extension))
+                paths.push_back(path);
+        }
+
+        std::sort(paths.begin(), paths.end(), [](const path& path1, const path& path2) {
+            return String::ToLower(path1.filename().string()) < String::ToLower(path2.filename().string());
+        });
+
+        for (const auto& path : paths)
+            filePaths.push_back(path
+#if defined(UNICODE) || defined(_UNICODE)
+                .wstring()
+#else // UNICODE
+                .string ()
+#endif // UNICODE
+            );
+        return !err;
+    }
+
+    static tstring GetStem(tstring filePath)
+    {
+        std::filesystem::path path = filePath;
+        return path.stem()
+#if defined(UNICODE) || defined(_UNICODE)
+            .wstring();
+#else // UNICODE
+            .string ();
+#endif // UNICODE
+    }
+
+    static bool Read(tstring fileName, std::vector<std::string>& lines)
+    {
+        std::ifstream stream(fileName);
+        if (!stream.is_open())
+            return false;
+
+        lines.clear();
+        std::string line;
+        while (getline(stream, line))
+            lines.push_back(line);
+
+        return true;
     }
 };
 
