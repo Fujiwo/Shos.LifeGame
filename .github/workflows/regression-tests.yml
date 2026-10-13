@@ -1,0 +1,15 @@
+name: Regression tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  regression-tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and run the tests for all 16 combinations of USEBITS / FAST / MT / AREA
+        run: ./Shos.LifeGame.Test/run_regression_tests.sh

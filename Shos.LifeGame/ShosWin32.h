@@ -9,6 +9,10 @@
 #include <windows.h>
 #include <windowsx.h>
 #include <tchar.h>
+#if defined(USERMESSAGE)
+#include <algorithm>
+#include <vector>
+#endif // USERMESSAGE
 
 namespace Shos::Win32 {
 
@@ -17,7 +21,7 @@ class Window
     HWND handle;
 
 #if defined(USERMESSAGE)
-    vector<UINT> userMessages;
+    std::vector<UINT> userMessages;
 #endif // USERMESSAGE
 
 public:
@@ -48,8 +52,8 @@ public:
     UINT_PTR SetTimer(UINT_PTR timerId = 1U, UINT timeoutMilliseconds = 1000)
     { return ::SetTimer(handle, timerId, timeoutMilliseconds, nullptr); }
 
-    UINT_PTR KillTimer(UINT_PTR timerId = 1U, UINT timeoutMilliseconds = 1000)
-    { return ::SetTimer(handle, timerId, timeoutMilliseconds, nullptr); }
+    bool KillTimer(UINT_PTR timerId = 1U)
+    { return ::KillTimer(handle, timerId) != FALSE; }
 #endif // TIMER
 
     void Invalidate(const RECT& rect) const
@@ -171,7 +175,7 @@ private:
 #if defined(USERMESSAGE)
                 {
                     auto self = GetSelf(windowHandle);
-                    if (self == nullptr || !self->OnUserMessage(message))
+                    if (self == nullptr || !self->DispatchUserMessage(message, wParam, lParam))
                         return ::DefWindowProc(windowHandle, message, wParam, lParam);
                 }
                 break;
@@ -184,11 +188,11 @@ private:
 
     static bool RegisterWindowClass(HINSTANCE instanceHandle, LPCTSTR windowClassName)
     {
-        WNDCLASSEXW wcex;
+        WNDCLASSEX wcex;
         if (::GetClassInfoEx(instanceHandle, windowClassName, &wcex))
             return true;
 
-        ::ZeroMemory(&wcex, sizeof(WNDCLASSEXW));
+        ::ZeroMemory(&wcex, sizeof(WNDCLASSEX));
         wcex.cbSize        = sizeof(WNDCLASSEX);
         wcex.style         = CS_HREDRAW | CS_VREDRAW;
         wcex.lpfnWndProc   = windowProcedure;
@@ -200,32 +204,39 @@ private:
     }
 
 #if defined(USERMESSAGE)
-    bool OnUserMessage(UINT userMessage)
+    bool DispatchUserMessage(UINT userMessage, WPARAM wParam, LPARAM lParam)
     {
         if (ExistsUserMessage(userMessage)) {
-            OnUserMessage(userMessage, 0, 0);
+            OnUserMessage(userMessage, wParam, lParam);
             return true;
         }
         return false;
     }
 
-    bool ExistsUserMessage(UINT userMessage)
-    { return find(userMessages.begin(), userMessages.end(), userMessage) != userMessages.end(); }
+    bool ExistsUserMessage(UINT userMessage) const
+    { return std::find(userMessages.begin(), userMessages.end(), userMessage) != userMessages.end(); }
 #endif // USERMESSAGE
 };
 
 #if defined(TIMER)
 class Timer final
 {
-    const UINT_PTR handle;
+    const HWND     windowHandle;
+    const UINT_PTR timerId;
 
 public:
     Timer(const Window& window, UINT_PTR timerId = 1U, UINT timeoutMilliseconds = 1000)
-        : handle(::SetTimer(window.GetHandle(), timerId, timeoutMilliseconds, nullptr))
+        : windowHandle(window.GetHandle()), timerId(::SetTimer(window.GetHandle(), timerId, timeoutMilliseconds, nullptr))
     {}
 
     ~Timer()
-    { ::KillTimer(nullptr, handle); }
+    {
+        if (timerId != 0U)
+            ::KillTimer(windowHandle, timerId);
+    }
+
+    Timer(const Timer&)            = delete;
+    Timer& operator=(const Timer&) = delete;
 };
 #endif // TIMER
 

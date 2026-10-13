@@ -11,13 +11,13 @@
 #include <sstream>
 #include <vector>
 
-#if defined(UNICODE) || defined(_UNICODE)
-#define tstring std::wstring
-#else // UNICODE
-#define tstring std::string
-#endif // UNICODE
-
 namespace Shos {
+
+#if defined(UNICODE) || defined(_UNICODE)
+using tstring = std::wstring;
+#else // UNICODE
+using tstring = std::string;
+#endif // UNICODE
 
 class Helper final
 {

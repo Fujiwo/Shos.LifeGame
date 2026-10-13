@@ -1,16 +1,16 @@
 # Shos.LifeGame
 
-![LifeGame](https://github.com/Fujiwo/Shos.LifeGame/blob/d3f10a69e5d811110e2ce61c762cc321bfd114af/Images/lifefame01.20240112.161130.gif)
+![LifeGame](Images/lifegame01.20240112.161130.gif)
 
 [![LifeGame](https://github.com/Fujiwo/Shos.LifeGame/blob/ad75f0d9918889e01b941cb3e861f661ea3fed34/Images/lifegame01.png)](https://youtu.be/ny-VKZEAVkg)
 
 ## Overview
 
-&quot;C++/Win32 ultra-fast life game&quot;
+"C++/Win32 ultra-fast life game"
 
 [Conway's Game of Life | Wikipedia](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life)
 
-This program is designed to simulate a cellular automaton known as the &quot;Life Game&quot;.
+This program is designed to simulate a cellular automaton known as the "Life Game".
 
 ## Program
 
@@ -22,13 +22,13 @@ Below are the main classes and their roles:
 - Size, Point, Rect: These are classes representing size, coordinates, and rectangles, respectively. They are used to manage the game field and the position of cells.
 - Utility: This class provides methods to perform actions on each point within a given rectangle. It is used to scan all cells.
 - ThreadUtility: A class to support multithreaded processing. It performs actions in parallel for a specific range of integers.
-- Pattern, PatternSet: Classes to represent the initial patterns of the &quot;Life Game&quot;. Patterns are stored as strings representing whether a cell is alive or dead.
+- Pattern, PatternSet: Classes to represent the initial patterns of the "Life Game". Patterns are stored as strings representing whether a cell is alive or dead.
 - BitCellSet: A class to represent the game field. Each cell is represented as a bit.
-- Game: The main class of the program. It manages the game field and the rules of the &quot;Life Game&quot;. It also provides methods to perform the game simulation.
+- Game: The main class of the program. It manages the game field and the rules of the "Life Game". It also provides methods to perform the game simulation.
 
 This namespace includes several optimizations to improve performance, such as data representation switching, multithreading, and fast loops. These can be enabled or disabled through preprocessor directives (#define). `#define USEBITS` enables 1-bit-per-cell storage (when it is not defined, the board uses `bool**`). `#define FAST` enables fast loops, `#define MT` enables multithreaded processing, and `#define AREA` enables optimization to track the area of active cells and reduce unnecessary calculations. In this project, these four directives are treated as the four core optimization elements, while `BoardPainter` is treated separately as rendering optimization. These directives can be used to adjust the performance and resource usage of the program.
 
-Overall, this namespace provides various features and optimizations to efficiently simulate the &quot;Life Game&quot;. Each class and function is designed to serve a specific purpose. By understanding this program, you can gain a deep understanding of many important computer science concepts, such as game simulation, multithreaded processing, and performance optimization.
+Overall, this namespace provides various features and optimizations to efficiently simulate the "Life Game". Each class and function is designed to serve a specific purpose. By understanding this program, you can gain a deep understanding of many important computer science concepts, such as game simulation, multithreaded processing, and performance optimization.
 
 ### namespace Shos::LifeGame::Win32
 
@@ -48,21 +48,37 @@ This namespace provides a basic framework for creating a window and running a me
 
 ### namespace Shos
 
-- Helper: A class to provide various helper methods. It includes methods to convert between strings and numbers, and to measure time.
-- File: A class to manage files. It provides methods to read and write files.
-- String: A class to manage strings. It provides methods to split and join strings.
-- stopwatch: A class to measure time. It uses std::chrono::high_resolution_clock.
+- Helper: A class to provide generic helper methods for collections (ForEach, Map, Filter, Maximum and Connect).
+- File: A class to manage files. It provides methods to list the files in a folder and to read a text file.
+- String: A class to manage strings. It provides methods to trim, pad, split and lower strings.
+- stopwatch: A class to measure time. It uses std::chrono::steady_clock.
+
+## Usage
+
+- The board has 1000 x 1000 cells. Cells outside of the board are always dead (the board is not a torus).
+- Press '0' to '9', 'a' to 'z' or 'A' to 'Z' to choose a pattern. If you press a key that is not assigned a pattern, a random pattern will be generated.
+- Click the right mouse button to generate a random pattern.
+- The title bar shows the generation, the elapsed time, the FPS (generations per second) and the pattern name.
 
 ## Pattern Files
 
-Pattern files can be stored and accessed in the CellData folder.
+Pattern files are read from the CellData folder next to the executable.
 
-The program supports the following two pattern file formats:
+The program supports the following two pattern file formats (the extensions are case-insensitive):
 
-- Life 1.05 (.LIF/.LIFE)
-- [RLE (*.RLE)](https://en.wikipedia.org/wiki/Run-length_encoding)
+- [Life 1.05](https://conwaylife.com/wiki/Life_1.05) (.lif/.life): '#' lines and '!' comment lines are skipped. '#P x y' blocks are supported.
+- [RLE](https://conwaylife.com/wiki/Run_Length_Encoded) (.rle): The rule in the header is ignored (B3/S23 is always used).
 
-By default, the CellData folder contains 46 pattern files. To call each pattern, input '0' to '9', 'a' to 'z', 'A' to 'J'. If you press a key that is not assigned a pattern, a random pattern will be generated.
+By default, the CellData folder contains 46 pattern files. Life 1.05 files come first and RLE files follow, each sorted by file name. They are assigned to '0' to '9', 'a' to 'z' and 'A' to 'J' in this order.
+
+## Tests
+
+Shos.LifeGame.Test/Shos.LifeGame.RegressionTest.cpp contains regression tests of the simulation, the bitmap layout and the pattern files. The script below builds and runs them for all 16 combinations of USEBITS / FAST / MT / AREA with g++ (Linux or WSL).
+
+```
+./Shos.LifeGame.Test/run_regression_tests.sh          # all combinations
+./Shos.LifeGame.Test/run_regression_tests.sh --asan   # with AddressSanitizer and UndefinedBehaviorSanitizer
+```
 
 ## Authors
 

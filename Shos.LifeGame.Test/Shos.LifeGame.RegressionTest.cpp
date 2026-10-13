@@ -384,6 +384,46 @@ void AreaSurroundsPattern()
 #endif // AREA
 }
 
+void AreaShrinks()
+{
+#if defined(AREA)
+    // Review 3.9: a lone cell dies, so that the area shrinks to the block.
+    Game game(Size(64, 64));
+    Place(game, { { 5, 5 }, { 6, 5 }, { 5, 6 }, { 6, 6 }, { 50, 50 } });
+    game.Next();
+    game.Next();
+    const auto area = game.GetBoard().GetArea();
+    CHECK(!area.IsIn(Point(50, 50)));
+    CHECK(area.size.cx <= 4 && area.size.cy <= 4);
+#endif // AREA
+}
+
+void AreaFollowsGlider()
+{
+#if defined(AREA)
+    Game       game(Size(64, 64));
+    const auto start = Shift(glider, 2, 2);
+    Place(game, start);
+    for (auto generation = 0; generation < 120; generation++)
+        game.Next();
+    CHECK_EQ(Shift(start, 30, 30), GetAliveCells(game.GetBoard()));
+    const auto area = game.GetBoard().GetArea();
+    CHECK(!area.IsIn(Point(2, 2)));
+    CHECK(area.size.cx <= 5 && area.size.cy <= 5);
+#endif // AREA
+}
+
+void AllCellsDie()
+{
+    Game game(Size(16, 16));
+    Place(game, { { 3, 3 }, { 10, 10 } });
+    game.Next();
+    CHECK_EQ(Cells{}, GetAliveCells(game.GetBoard()));
+    Place(game, { { 7, 6 }, { 7, 7 }, { 7, 8 } });
+    game.Next();
+    CHECK_EQ((Cells{ { 6, 7 }, { 7, 7 }, { 8, 7 } }), GetAliveCells(game.GetBoard()));
+}
+
 void TooLargePatternIsRejected()
 {
     Board board(Size(8, 8));
@@ -572,6 +612,12 @@ void RleCrLf()
     CHECK_EQ((std::vector<std::string>{ "***", ".*." }), rows);
 }
 
+void RleOmittedTrailingEmptyLines()
+{
+    const auto rows = ReadRows("trailing.rle", "x = 2, y = 3\n2o!\n");
+    CHECK_EQ((std::vector<std::string>{ "**", "..", ".." }), rows);
+}
+
 void RleWithoutTerminator()
 {
     const auto rows = ReadRows("open.rle", "x = 2, y = 2\n2o$bo\n");
@@ -655,6 +701,9 @@ int Run()
         { "GliderVanishesAtCorner"                   , Expect::Pass    , ""   , GliderVanishesAtCorner                  },
         { "PatternIsCentered"                        , Expect::Pass    , ""   , PatternIsCentered                       },
         { "AreaSurroundsPattern"                     , Expect::Pass    , ""   , AreaSurroundsPattern                    },
+        { "AreaShrinks"                              , Expect::Pass    , ""   , AreaShrinks                             },
+        { "AreaFollowsGlider"                        , Expect::Pass    , ""   , AreaFollowsGlider                       },
+        { "AllCellsDie"                              , Expect::Pass    , ""   , AllCellsDie                             },
         { "TooLargePatternIsRejected"                , Expect::Pass    , ""   , TooLargePatternIsRejected               },
         { "RandomBoardMatchesReference"              , Expect::Pass    , ""   , RandomBoardMatchesReference             },
         { "BitmapLeftmostPixelIsMostSignificantBit"  , Expect::Pass    , ""   , BitmapLeftmostPixelIsMostSignificantBit },
@@ -675,6 +724,7 @@ int Run()
         { "RleRunOfLineBreaks"                       , Expect::Pass    , ""   , RleRunOfLineBreaks                      },
         { "RleCrLf"                                  , Expect::Pass    , ""   , RleCrLf                                 },
         { "RleWithoutTerminator"                     , Expect::Pass    , ""   , RleWithoutTerminator                    },
+        { "RleOmittedTrailingEmptyLines"             , Expect::Pass    , ""   , RleOmittedTrailingEmptyLines            },
         { "BundledPatternsAreAllLoaded"              , Expect::Pass    , ""   , BundledPatternsAreAllLoaded             },
         { "BundledRleSizesMatchHeader"               , Expect::Pass    , ""   , BundledRleSizesMatchHeader              },
         { "BundledOtcaMetapixelSizeMatchesHeader"    , Expect::Pass    , ""   , BundledOtcaMetapixelSizeMatchesHeader   },

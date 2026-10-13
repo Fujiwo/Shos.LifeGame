@@ -8,15 +8,11 @@
 
 using namespace std;
 
-#if defined(UNICODE) || defined(_UNICODE)
-#define tstringstream wstringstream
-#else // UNICODE
-#define tstringstream stringstream
-#endif // UNICODE
-
 //#define LAP_TIMES   1000
 
 namespace Shos::LifeGame::Application {
+
+using tstringstream = std::basic_stringstream<TCHAR>;
 
 using namespace Shos;
 using namespace Shos::LifeGame;
@@ -26,7 +22,8 @@ using namespace Shos::Win32;
 class MainWindow final : public Window
 {
 #if defined(TIMER)
-    static constexpr int timerTimeoutMilliseconds = 100;
+    static constexpr UINT_PTR timerId                  = 1U;
+    static constexpr UINT     timerTimeoutMilliseconds = 100U;
 #endif // TIMER
     static const TCHAR  title[];
     static const TCHAR  windowClassName[];
@@ -37,7 +34,7 @@ class MainWindow final : public Window
 #if defined(TIMER)
     Timer*    timer;
 #endif // TIMER
-    stopwatch stopwatch;
+    stopwatch watch;
 
 public:
     MainWindow() : game({ 1000, 1000 }), paintPosition({ 0, 0 }), renderingArea({ 0, 0, 0, 0 })
@@ -62,7 +59,7 @@ public:
 protected:
 #if defined(TIMER)
     virtual void OnCreate() override
-    { timer = new Timer(*this, timerTimeoutMilliseconds); }
+    { timer = new Timer(*this, timerId, timerTimeoutMilliseconds); }
 #endif // TIMER
 
     virtual void OnSize(SIZE size) override
@@ -117,8 +114,8 @@ private:
 
     void Next()
     {
-        if (!stopwatch.is_running())
-            stopwatch.start();
+        if (!watch.is_running())
+            watch.start();
 
         game.Next();
         Invalidate(renderingArea);
@@ -128,7 +125,7 @@ private:
     void Reset(bool randomize)
     {
         game.Reset(randomize);
-        stopwatch.start();
+        watch.start();
     }
 
     void SetTitle() const
@@ -150,7 +147,7 @@ private:
     {
         auto    generation  = game.GetGeneration();
         auto    patternName = game.GetPatternName();
-        auto    elapsed     = stopwatch.get_elapsed();
+        auto    elapsed     = watch.get_elapsed();
 #if defined(LAP_TIMES)
         if (generation == LAP_TIMES) {
             lap.generation = generation;
@@ -196,11 +193,22 @@ protected:
 
 int APIENTRY _tWinMain(_In_     HINSTANCE instanceHandle        ,
                        _In_opt_ HINSTANCE previousInstanceHandle,
-                       _In_     LPWSTR    commandLine           ,
+                       _In_     LPTSTR    commandLine           ,
                        _In_     int       showCommand           )
 {
     UNREFERENCED_PARAMETER(previousInstanceHandle);
     UNREFERENCED_PARAMETER(commandLine           );
+
+    // Patterns are read from ".\CellData". Make it relative to the executable, not to where it was started from.
+    TCHAR modulePath[MAX_PATH];
+    const auto length = ::GetModuleFileName(nullptr, modulePath, MAX_PATH);
+    if (0 < length && length < MAX_PATH) {
+        const auto separator = _tcsrchr(modulePath, _T('\\'));
+        if (separator != nullptr) {
+            *separator = _T('\0');
+            ::SetCurrentDirectory(modulePath);
+        }
+    }
 
     Shos::LifeGame::Application::Program().Run(instanceHandle, showCommand);
     return 0;

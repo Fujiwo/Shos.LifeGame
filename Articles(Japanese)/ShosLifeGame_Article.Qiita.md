@@ -102,8 +102,8 @@
 ---
 
 ## 3. パターンファイル形式とCellDataの読み解き
-### 3.1 [`.lif`(Life 1.05)形式](https://conwaylife.com/wiki/Plaintext)
-`.lif` は、見た目に近い形でセル配置を行テキストとして持つ形式である。`Shos.LifeGame` の実装では、まず `#` で始まるコメント行を取り除き、次に行幅を揃えてから、生セル `*` と死セル `.` の内部表現へ連結する。  
+### 3.1 [`.lif`(Life 1.05)形式](https://conwaylife.com/wiki/Life_1.05)
+`.lif` は、見た目に近い形でセル配置を行テキストとして持つ形式である。`Shos.LifeGame` の実装では、まず `#` で始まる行と `!` で始まるコメント行を取り除き、次に行幅を揃えてから、生セル `*` と死セル `.` の内部表現へ連結する。`#P x y` があれば、続く行をその位置のブロックとして配置する。ブロックの途中の空行は「すべて死セルの行」として扱う。  
 この手順の利点は、ファイルを目で追いやすい点にある。形式が素直なので、パターンの意図を理解しながらデータ化できるのが `.lif` の強みである。
 
 例. Gosper glider gun
@@ -171,7 +171,7 @@ Gun/Oscillator/Spaceship などのカテゴリで、用途に応じたパター�
 
 #### 図6: 更新パイプライン
 `MainWindow::Next` から `Game::Next` を経由して、最終的に `BoardPainter::Paint` で表示される。
-<img src="https://raw.githubusercontent.com/Fujiwo/Shos.LifeGame/0b8c8159d4726cb7bac51249b6c6112e0778b79c/Articles(Japanese)/Images/ShosLifeGame_Figure06_UpdatePipeline.svg" alt="図6 更新パイプライン"</img>
+<img src="https://raw.githubusercontent.com/Fujiwo/Shos.LifeGame/0b8c8159d4726cb7bac51249b6c6112e0778b79c/Articles(Japanese)/Images/ShosLifeGame_Figure06_UpdatePipeline.svg" alt="図6 更新パイプライン"></img>
 
 #### 図7: 盤面ビット列からBitmap描画への変換
 `Board::GetBits()` の出力をBitmapに渡し、`BitBlt` で画面転送する流れを示す。
@@ -185,7 +185,7 @@ Gun/Oscillator/Spaceship などのカテゴリで、用途に応じたパター�
 
 | 要素 | 内容 | 主に効く場所 | 効きやすい条件 | 主な副作用 |
 |---|---|---|---|---|
-| USEBITS | セルを1bitで保持 | セルデータ保持/更新/描画 | ビット表現を維持したい場合 | FALSE時はメモリ増・変換負荷増 |
+| USEBITS | セルを1bitで保持 | セルデータ保持/更新/描画 | ビット表現を維持したい場合 | 未定義時はメモリ増・変換負荷増 |
 | FAST | 直にループ | 繰り返し処理 | 呼び出しオーバーヘッドを削りたい場合 | コード重複が増える |
 | MT | マルチスレッド | 更新計算 | 大盤面・多コア環境 | 同期コスト・環境依存 |
 | AREA | 走査範囲の最適化 | 走査範囲 | 疎なパターン | 領域管理が複雑化 |
@@ -199,8 +199,8 @@ class Board final { bool** cells; };
 class Board final : public BitCellSet {};
 #endif
 ```
-`USEBITS` は盤面の保持形式を切り替えるための分岐で、TRUE(定義)側ではビット演算を中心に高密度な表現を使える。その一方で、FALSE(未定義)側の `bool**` 実装は理解しやすさに利点がある反面、表現密度の低下によりメモリ使用量が増えやすく、描画側で `GetBits()` を使う際の変換コストが目立つ場面も出てくる。
-速度面では、`USEBITS` を TRUE(定義)にして `BitCellSet` を使うほうが有利になる。盤面の更新がビット演算となり、また、描画がビット列の転送(`GetBits()` 経由) で行えるためである。もちろん、メモリーの使用量も大幅に減る。
+`USEBITS` は盤面の保持形式を切り替えるための分岐で、定義した側ではビット演算を中心に高密度な表現を使える。その一方で、未定義の側の `bool**` 実装は理解しやすさに利点がある反面、表現密度の低下によりメモリ使用量が増えやすく、描画側で `GetBits()` を使う際の変換コストが目立つ場面も出てくる。
+速度面では、`USEBITS` を定義して `BitCellSet` を使うほうが有利になる。盤面の更新がビット演算となり、また、描画がビット列の転送(`GetBits()` 経由) で行えるためである。もちろん、メモリーの使用量も大幅に減る。
 
 ### 5.2 FAST (直接ループ)
 ```cpp
@@ -228,10 +228,12 @@ ThreadUtility::ForEach(area.leftTop.y, areaRightBottom.y,
 const auto area = mainBoard->GetArea();
 NextPart(area.leftTop, area.RightBottom());
 ```
-`AREA` は活動領域だけを更新対象にすることで、死セルばかりの領域を計算から外す考え方である。疎なパターンでは計算量を大きく減らせるが、その効果を支えるために領域管理ロジックは複雑になり、検証時の観点も増える。
+`AREA` は活動領域だけを更新対象にすることで、死セルばかりの領域を計算から外す考え方である。疎なパターンでは計算量を大きく減らせるが、その効果を支えるために領域管理ロジックは複雑になり、検証時の観点も増える。  
+活動領域は世代ごとに「生きているセルの外接矩形 + 周囲1マス」から求め直すので、パターンが小さくなれば領域も縮む。ただし計算するのは前の世代の活動領域の中だけなので、領域が縮んだときは、その差分にあたる古いセルを先に消しておく必要がある(`Game::ClearOutside`)。なお、ランダムな盤面や、グライダーが盤面の端まで飛んでいくパターンでは、活動領域が盤面全体に広がるため効果は小さい。
 
 ### 5.5 描画高速化(`ShosLifeGameBoardPainter.h`)
 `USEBITS` が有効の構成では、`Board` は `BitCellSet` 派生として `UnitInteger* cells` を持ち、更新で書き換えたビット列を `GetBits()` で直接取り出せる。`BoardPainter` はそのポインタを `BITMAP::bmBits` に渡して `CreateBitmapIndirect` を作成し、最後に `BitBlt` で画面へ転送する。  
+これができるのは、`BitCellSet` のビット配置を1bppのビットマップに合わせてあるからである。ビットマップでは各バイトの最上位ビットが左端のピクセルで、1行のバイト数は WORD(2バイト) 境界に揃える(`BitCellSet::GetRowByteNumber`)。  
 この流れの本質は、更新結果を別形式へ組み替えずに描画へ橋渡ししている点にある。ピクセル単位の手作業ループを避けられるため、描画コストを抑えやすくなる。ただし実装は1bpp/GDI前提なので、可搬性よりも速度寄りの選択だと捉えるのが適切である。
 
 ```cpp
@@ -272,11 +274,11 @@ return ::CreateBitmapIndirect(&bitmap);
 
 | Level | USEBITS | FAST | MT | AREA | 実行時間 | 世代/秒 | 世代/秒の倍率 |
 |---:|:---:|:---:|:---:|:---:|---:|---:|---:|
-| 0 | FALSE | FALSE | FALSE | FALSE | 63.8s | 16 | 1.00 |
-| 1 | TRUE | FALSE | FALSE | FALSE | 60.2s | 17 | 1.06 |
-| 2 | TRUE | TRUE | FALSE | FALSE | 24.2s | 41 | 2.56 |
-| 3 | TRUE | TRUE | TRUE | FALSE | 11.7s | 86 | 5.38 |
-| 4 | TRUE | TRUE | TRUE | TRUE | 4.1s | 244 | 15.25 |
+| 0 | 未定義 | 未定義 | 未定義 | 未定義 | 63.8s | 16 | 1.00 |
+| 1 | 定義 | 未定義 | 未定義 | 未定義 | 60.2s | 17 | 1.06 |
+| 2 | 定義 | 定義 | 未定義 | 未定義 | 24.2s | 41 | 2.56 |
+| 3 | 定義 | 定義 | 定義 | 未定義 | 11.7s | 86 | 5.38 |
+| 4 | 定義 | 定義 | 定義 | 定義 | 4.1s | 244 | 15.25 |
 
 ただし、これは、あくまで共有された実行環境での結果であり、CPU、ビルド設定、実行条件の違いで値は変わる。
 

@@ -7,8 +7,8 @@ namespace Shos {
 
 class stopwatch
 {
-    bool                                               has_started;
-    std::chrono::time_point<std::chrono::system_clock> start_time;
+    bool                                  has_started;
+    std::chrono::steady_clock::time_point start_time;
 
 public:
     bool is_running() const
@@ -20,7 +20,7 @@ public:
     void start()
     {
         has_started = true;
-        start_time  = std::chrono::system_clock::now();
+        start_time  = std::chrono::steady_clock::now();
     }
 
     double get_elapsed() const
@@ -28,24 +28,21 @@ public:
         if (!has_started)
             return 0.0;
 
-        const auto end_time = std::chrono::system_clock::now();  // End time
-        const auto elapsed  = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count() / 1000.0;
-        return elapsed;
+        const auto end_time = std::chrono::steady_clock::now();
+        return std::chrono::duration<double>(end_time - start_time).count();
     }
 };
 
 class stopwatch_viewer final
 {
-    stopwatch stopwatch;
+    stopwatch watch;
 
 public:
-    void (*output)(double elapsed) = show_result;
-
     stopwatch_viewer()
-    { stopwatch.start(); }
+    { watch.start(); }
 
     ~stopwatch_viewer()
-    { show_result(stopwatch.get_elapsed()); }
+    { show_result(watch.get_elapsed()); }
 
 private:
     static void show_result(double elapsed)

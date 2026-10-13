@@ -15,6 +15,7 @@
 #include <thread>
 #endif // MT
 
+#include <cstdint>
 #include <random>
 #include <algorithm>
 #include <sstream>
@@ -43,7 +44,7 @@ public:
     Random() : engine(rd())
     {}
 
-    Integer Next()
+    std::uint32_t Next()
     { return engine(); }
 };
 
@@ -129,6 +130,9 @@ struct Rect final
         return IsIn(point.x, leftTop.x, size.cx) &&
                IsIn(point.y, leftTop.y, size.cy);
     }
+
+    bool IsEmpty() const
+    { return size.cx <= 0 || size.cy <= 0; }
 
 private:
     template <typename T>
@@ -217,7 +221,7 @@ private:
 
 class Pattern final
 {
-    const char            alive = '*';
+    static constexpr char alive = '*';
     const tstring         name;
     const std::string     pattern;
     const UnsignedInteger width;
@@ -435,6 +439,7 @@ private:
                         break;
                     case '!':
                         AppendPartPattern(partPattern, width, pattern);
+                        PadEmptyLines(width, height, pattern);
                         return pattern;
                     }
                     count = 0U;
@@ -442,7 +447,16 @@ private:
             }
             if (!partPattern.empty()) // Without the terminator '!'
                 AppendPartPattern(partPattern, width, pattern);
+            PadEmptyLines(width, height, pattern);
             return pattern;
+        }
+
+        /// <summary>Trailing empty lines may be omitted in RLE.</summary>
+        static void PadEmptyLines(UnsignedInteger width, UnsignedInteger height, std::string& pattern)
+        {
+            const auto length = size_t(width) * size_t(height);
+            if (pattern.length() < length)
+                pattern.append(length - pattern.length(), '.');
         }
 
         static void AppendPartPattern(std::string& partPattern, UnsignedInteger width, std::string& pattern)
@@ -519,10 +533,12 @@ public:
     static Rect GetDefaultArea(const Rect& rect)
     { return Rect(Point(rect.leftTop.x + std::max(0, rect.size.cx / 2 - 1), rect.leftTop.y + std::max(0, rect.size.cy / 2 - 1)), Size(std::min(rect.size.cx, 3), std::min(rect.size.cy, 3))); }
 
-#if defined(MT)
+    /// <summary>An area that contains no cells. Union with a point gives the area around the point.</summary>
+    static Rect GetEmptyArea(const Size& size)
+    { return Rect(Point(size.cx, size.cy), Point(0, 0)); }
+
     void SetArea(const Rect& newArea)
     { area = newArea; }
-#endif // MT
 
 #else // AREA
     { return GetRect(); }
@@ -657,7 +673,7 @@ private:
         areaMinimum = std::max(std::min(areaMinimum, value - 1    ), minimum);
         areaMaximum = std::min(std::max(areaMaximum, value + 1 + 1), maximum);
 #if defined(_DEBUG)
-        assert(value == minimum || value == maximum - 1 || areaMinimum < value && value < areaMaximum - 1);
+        assert(value == minimum || value == maximum - 1 || (areaMinimum < value && value < areaMaximum - 1));
 #endif // _DEBUG
     }
 
@@ -710,32 +726,32 @@ public:
     Rect GetArea() const
 #if defined(AREA)
     { return area; }
-#if defined(MT)
+
     void SetArea(const Rect& newArea)
     { area = newArea; }
-#endif // MT
 #else // AREA
     { return GetRect(); }
 #endif // AREA
 
     UnitInteger* GetBits()
     {
-        delete bitCellSet;
-        bitCellSet = new BitCellSet(size);
+        bitCellSet->Clear();
 
 #if defined(FAST)
         for (auto point = Point{ 0, 0 }; point.y < size.cy; point.y++) {
-            for (point.x = 0; point.x < size.cx; point.x++)
-                bitCellSet->Set(point, Get(point));
+            for (point.x = 0; point.x < size.cx; point.x++) {
+                if (Get(point))
+                    bitCellSet->SetOnly(point, true);
+            }
         }
 #else // FAST
-        Utility::ForEach(Rect{ Point {0, 0}, size }, [&](const Point& point) { bitCellSet->Set(point, Get(point)); });
+        Utility::ForEach(Rect{ Point {0, 0}, size }, [&](const Point& point) { bitCellSet->SetOnly(point, Get(point)); });
 #endif // FAST
 
         return bitCellSet->GetBits();
     }
 
-    Board(const Size& size) : size(size), bitCellSet(nullptr)
+    Board(const Size& size) : size(size), bitCellSet(new BitCellSet(size))
 #if defined(AREA)
         , area(BitCellSet::GetDefaultArea(Rect(Point(), size)))
 #endif // AREA
@@ -952,7 +968,7 @@ public:
     { return generation; }
 
     tstring GetPatternName() const
-    { return 0 <= patternIndex && patternIndex < patternSet.GetSize() ? patternSet[patternIndex].GetName() : _T(""); }
+    { return 0 <= patternIndex && size_t(patternIndex) < patternSet.GetSize() ? patternSet[size_t(patternIndex)].GetName() : _T(""); }
 
     Game(const Size& size) : mainBoard(new Board(size)), subBoard(new Board(size)), generation(0UL), patternIndex(-1)
 #if defined(AREA) && defined(MT)
@@ -974,6 +990,11 @@ public:
 
     void Next()
     {
+#if defined(AREA)
+        // The area of subBoard is computed again from the cells alive in the next generation, so that it can shrink.
+        ClearOutside(*subBoard, mainBoard->GetArea());
+        subBoard->SetArea(BitCellSet::GetEmptyArea(subBoard->GetSize()));
+#endif // AREA
 
 #if defined(MT)
         //const auto size = mainBoard->GetSize();
@@ -1013,6 +1034,11 @@ public:
         });
 #endif // FAST
 
+#if defined(AREA)
+        if (subBoard->GetArea().IsEmpty()) // No cells alive
+            subBoard->SetArea(BitCellSet::GetDefaultArea(Rect(Point(), subBoard->GetSize())));
+#endif // AREA
+
 #if defined(_DEBUG)
         Test(*mainBoard);
 #endif // _DEBUG
@@ -1031,12 +1057,12 @@ public:
 
     bool SetPattern(int index)
     {
-        if (index < 0 || patternSet.GetSize() <= index) {
+        if (index < 0 || patternSet.GetSize() <= size_t(index)) {
             patternIndex = -1;
             return false;
         }
-        mainBoard->Set(patternSet[index]);
-        subBoard ->Set(patternSet[index]);
+        mainBoard->Set(patternSet[size_t(index)]);
+        subBoard ->Set(patternSet[size_t(index)]);
         patternIndex = index;
         return true;
     }
@@ -1074,9 +1100,36 @@ private:
     void ResetAreas()
     {
         for (auto index = 0U; index < hardwareConcurrency; index++)
-            areas[index] = mainBoard->GetArea();
+            areas[index] = BitCellSet::GetEmptyArea(mainBoard->GetSize());
     }
 #endif // AREA && MT
+
+#if defined(AREA)
+    /// <summary>Kills the cells in the area of the board that are outside of the given area.</summary>
+    /// <remarks>The next generation is computed only in the area of mainBoard, so that cells outside of it must be dead in subBoard.</remarks>
+    static void ClearOutside(Board& board, const Rect& area)
+    {
+        const auto boardArea            = board.GetArea();
+        const auto boardAreaRightBottom = boardArea.RightBottom();
+        const auto areaRightBottom      = area.RightBottom();
+
+        // Only the difference of the areas is visited.
+        for (auto y = boardArea.leftTop.y; y < boardAreaRightBottom.y; y++) {
+            if (y < area.leftTop.y || areaRightBottom.y <= y) {
+                ClearRow(board, y, boardArea.leftTop.x, boardAreaRightBottom.x);
+            } else {
+                ClearRow(board, y, boardArea.leftTop.x, std::min(area.leftTop.x, boardAreaRightBottom.x));
+                ClearRow(board, y, std::max(areaRightBottom.x, boardArea.leftTop.x), boardAreaRightBottom.x);
+            }
+        }
+    }
+
+    static void ClearRow(Board& board, Integer y, Integer minimumX, Integer maximumX)
+    {
+        for (auto x = minimumX; x < maximumX; x++)
+            board.SetOnly(Point(x, y), false);
+    }
+#endif // AREA
 
 #if defined(AREA) && defined(MT)
     void NextPart(const Point& minimum, const Point& maximum, Rect& area)
