@@ -12,6 +12,7 @@
 
 namespace Shos {
 
+// A string of TCHAR: wide with UNICODE, multi-byte otherwise.
 #if defined(UNICODE) || defined(_UNICODE)
 using tstring = std::wstring;
 #else // UNICODE
@@ -21,6 +22,7 @@ using tstring = std::string;
 class String final
 {
 public:
+    /// <summary>Removes the leading and trailing white spaces (including "\r" of CRLF).</summary>
     static std::string Trim(std::string_view source)
     {
         constexpr std::string_view trimCharacters = " \t\r\n";
@@ -31,6 +33,7 @@ public:
                                                : std::string(source.substr(start, end - start + 1));
     }
 
+    /// <summary>Pads the text with the character up to the width. A longer text is not cut.</summary>
     static std::string Adjust(std::string text, char character, size_t width)
     {
         if (text.length() < width)
@@ -83,6 +86,7 @@ public:
         return filePaths;
     }
 
+    /// <returns>The file name without the folder and the extension.</returns>
     static tstring GetStem(const tstring& filePath)
     { return ToTString(std::filesystem::path(filePath).stem()); }
 
@@ -97,6 +101,7 @@ public:
     }
 
 private:
+    /// <summary>Converts the path to tstring, wide or multi-byte depending on UNICODE.</summary>
     static tstring ToTString(const std::filesystem::path& path)
     {
 #if defined(UNICODE) || defined(_UNICODE)

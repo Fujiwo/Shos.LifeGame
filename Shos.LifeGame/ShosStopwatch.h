@@ -5,6 +5,7 @@
 
 namespace Shos {
 
+/// <summary>Measures the elapsed time in seconds.</summary>
 class stopwatch
 {
     bool                                  has_started = false;
@@ -14,12 +15,14 @@ public:
     bool is_running() const
     { return has_started; }
 
+    /// <summary>Starts, or restarts from 0 if already running.</summary>
     void start()
     {
         has_started = true;
         start_time  = std::chrono::steady_clock::now();
     }
 
+    /// <returns>Seconds since start, or 0 if not started.</returns>
     double get_elapsed() const
     {
         if (!has_started)
@@ -30,6 +33,7 @@ public:
     }
 };
 
+/// <summary>Prints the time from its construction to its destruction to the standard output.</summary>
 class stopwatch_viewer final
 {
     stopwatch watch;

@@ -1,5 +1,6 @@
 #pragma once
 
+// How to drive the game. IDLE advances a generation whenever the message queue is empty, so that the FPS can be measured.
 //#define USERMESSAGE // OnUserMessage enabled
 //#define TIMER       // OnTimer enabled
 #define IDLE        // OnIdle enabled
@@ -17,12 +18,13 @@
 
 namespace Shos::Win32 {
 
+/// <summary>Base class of a window. The messages are dispatched to the virtual On... handlers.</summary>
 class Window
 {
     HWND handle = nullptr;
 
 #if defined(USERMESSAGE)
-    std::vector<UINT> userMessages;
+    std::vector<UINT> userMessages; // Messages dispatched to OnUserMessage
 #endif // USERMESSAGE
 
 public:
@@ -40,6 +42,7 @@ public:
     {
         RegisterWindowClass(instanceHandle, windowClassName);
 
+        // "this" is passed to WM_CREATE, so that windowProcedure can find this object.
         handle = ::CreateWindow(windowClassName, title, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, instanceHandle, this);
 
         if (handle == nullptr)
@@ -83,6 +86,7 @@ public:
 #endif // USERMESSAGE
 
 #if defined(IDLE)
+    /// <summary>Called by Program whenever the message queue is empty.</summary>
     virtual void OnIdle()
     {}
 #endif // IDLE
@@ -112,6 +116,7 @@ protected:
     {}
 
 private:
+    // The Window object is kept in GWLP_USERDATA of the window.
     static void SetSelf(HWND windowHandle, Window* self)
     { ::SetWindowLongPtr(windowHandle, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(self)); }
 
@@ -162,6 +167,7 @@ private:
             default:
 #if defined(USERMESSAGE)
                 {
+                    // self is null for the messages before WM_CREATE (e.g. WM_NCCREATE).
                     const auto self = GetSelf(windowHandle);
                     if (self == nullptr || !self->DispatchUserMessage(message, wParam, lParam))
                         return ::DefWindowProc(windowHandle, message, wParam, lParam);
@@ -174,6 +180,7 @@ private:
         return 0;
     }
 
+    /// <summary>Registers the window class, unless it has been registered.</summary>
     static bool RegisterWindowClass(HINSTANCE instanceHandle, LPCTSTR windowClassName)
     {
         if (WNDCLASSEX existing{ .cbSize = sizeof(WNDCLASSEX) }; ::GetClassInfoEx(instanceHandle, windowClassName, &existing))
@@ -207,6 +214,7 @@ private:
 };
 
 #if defined(TIMER)
+/// <summary>A timer of the window that is killed on destruction.</summary>
 class Timer final
 {
     const HWND     windowHandle;
@@ -228,6 +236,7 @@ public:
 };
 #endif // TIMER
 
+/// <summary>Base class of an application: creates the main window, and runs the message loop until WM_QUIT.</summary>
 class Program
 {
     Window* mainWindow = nullptr;
@@ -250,6 +259,7 @@ public:
     }
 
 protected:
+    /// <returns>The created main window, or nullptr on failure.</returns>
     virtual Window* CreateMainWindow(HINSTANCE instanceHandle, int showCommand) = 0;
 
 private:
@@ -257,6 +267,7 @@ private:
     {
         MSG message{};
 #if defined(IDLE)
+        // PeekMessage does not wait, so that this loop keeps one CPU core busy. It is intended, to measure the FPS.
         for (;;) {
             if (::PeekMessage(&message, nullptr, 0U, 0U, PM_REMOVE)) {
                 if (message.message == WM_QUIT)

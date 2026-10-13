@@ -1,5 +1,8 @@
 #pragma once
 
+// DebugOutput(format, ...): writes a formatted message to the debugger output with the MSVC CRT in Debug builds.
+// It is expanded to nothing in Release builds.
+
 #ifndef _DEBUG
 #define DebugOutput(msg, ...)
 #else	// ifndef _DEBUG else

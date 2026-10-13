@@ -2,10 +2,10 @@
 
 // Define SHOS_LIFEGAME_CUSTOM_CONFIG to choose the following options outside this file (e.g. in tests).
 #if !defined(SHOS_LIFEGAME_CUSTOM_CONFIG)
-#define USEBITS // Bits enabled
-#define FAST    // Fast loops enabled
-#define MT      // Multi-threading enabled
-#define AREA    // Area enabled
+#define USEBITS // Bits enabled           : a cell is stored in one bit (otherwise in one bool).
+#define FAST    // Fast loops enabled     : direct loops instead of generic loops with std::function.
+#define MT      // Multi-threading enabled: the rows are split among threads.
+#define AREA    // Area enabled           : only the active area of the board is computed.
 #endif // SHOS_LIFEGAME_CUSTOM_CONFIG
 
 #include <string>
@@ -40,8 +40,9 @@ namespace Shos::LifeGame {
 using Integer         = int          ;
 using UnsignedInteger = unsigned int ;
 using Byte            = unsigned char;
-using UnitInteger     = Byte         ;
+using UnitInteger     = Byte         ; // Storage unit of BitCellSet
 
+/// <summary>Random number generator to fill the board at random.</summary>
 class Random final
 {
     std::random_device rd;
@@ -86,11 +87,13 @@ struct Point final
     { return Size(x - point.x, y - point.y); }
 };
 
+/// <summary>A rectangle of cells. The right and bottom edges are exclusive: [leftTop, RightBottom()).</summary>
 struct Rect final
 {
     Point leftTop;
     Size  size;
 
+    /// <returns>The point just outside of the right-bottom corner.</returns>
     constexpr Point RightBottom() const
     { return leftTop + size; }
 
@@ -103,6 +106,7 @@ struct Rect final
     {}
 
 #if defined(AREA) && defined(MT)
+    /// <summary>The smallest rectangle that contains all the rectangles. Used to merge the areas of the threads.</summary>
     static Rect Union(std::span<const Rect> rects)
     {
         assert(!rects.empty());
@@ -144,6 +148,7 @@ private:
 class Utility final
 {
 public:
+    /// <summary>Counts the points in the rectangle that match the condition.</summary>
     static UnsignedInteger Count(const Rect& rect, std::function<bool(const Point&)> isMatch)
     {
         UnsignedInteger count = 0;
@@ -154,6 +159,7 @@ public:
         return count;
     }
 
+    /// <summary>Calls the action for each point in the rectangle, row by row.</summary>
     static void ForEach(const Rect& rect, std::function<void(const Point&)> action)
     {
         const Point rightBottom = rect.RightBottom();
@@ -187,17 +193,20 @@ public:
         // std::jthread joins on destruction.
     }
 
+    /// <remarks>std::thread::hardware_concurrency() may return 0 when it is unknown.</remarks>
     static unsigned int GetHardwareConcurrency()
     { return std::max(std::thread::hardware_concurrency(), 1U); }
 };
 #endif // MT
 
+/// <summary>A pattern of cells read from a file.</summary>
+/// <remarks>The rows are concatenated in "pattern": '*' is alive, and any other character is dead.</remarks>
 class Pattern final
 {
     static constexpr char alive = '*';
-    tstring               name;
+    tstring               name;    // File name without the extension
     std::string           pattern;
-    UnsignedInteger       width;
+    UnsignedInteger       width;   // Number of the cells in a row
 
 public:
     Size GetSize() const
@@ -217,10 +226,13 @@ public:
     Pattern(tstring name, std::string pattern, UnsignedInteger width) : name(std::move(name)), pattern(std::move(pattern)), width(width)
     {}
 
+    /// <returns>true if the cell at the index (y * width + x) is alive.</returns>
     bool operator[](size_t index) const
     { return pattern[index] == alive; }
 };
 
+/// <summary>The patterns read from a folder: Life 1.05 files (.lif/.life) first, then RLE files (.rle).</summary>
+/// <remarks>The order decides the keys of the patterns ('0'-'9', 'a'-'z', 'A'-'J'), so that adding or renaming a file shifts the keys.</remarks>
 class PatternSet final
 {
     std::vector<Pattern> patterns;
@@ -250,6 +262,7 @@ private:
         return lines;
     }
 
+    /// <summary>Reader of the Life 1.05 format (.lif/.life).</summary>
     class Pattern5 final
     {
     public:
@@ -263,6 +276,7 @@ private:
             return patterns;
         }
 
+        /// <summary>Pads the row with dead cells up to the width.</summary>
         static std::string Adjust(std::string text, size_t width)
         {
             constexpr auto character = '.';
@@ -297,6 +311,7 @@ private:
                         blocks.back().lines.push_back(line);
                 }
             }
+            // Trailing empty lines have no alive cells, and would only enlarge the pattern.
             for (auto& block : blocks) {
                 while (!block.lines.empty() && block.lines.back().empty())
                     block.lines.pop_back();
@@ -306,6 +321,7 @@ private:
             if (blocks.empty())
                 return Pattern(_T(""), "", 0U);
 
+            // The bounding rectangle of all the blocks. Block positions may be negative.
             auto left   = blocks.front().position.x;
             auto top    = blocks.front().position.y;
             auto right  = left;
@@ -317,6 +333,7 @@ private:
                 bottom = std::max(bottom, block.position.y + block.GetHeight());
             }
 
+            // Draws the blocks into one pattern, relative to the left-top of the bounding rectangle.
             const auto  width = UnsignedInteger(right - left);
             std::string pattern(size_t(width) * size_t(bottom - top), '.');
             for (const auto& block : blocks) {
@@ -343,6 +360,10 @@ private:
         }
     };
 
+    /// <summary>Reader of the RLE format (.rle).</summary>
+    /// <remarks>A header line "x = m, y = n, rule = ..." is followed by the run-length encoded cells:
+    /// "b" is a dead cell, "o" is an alive cell, "$" is the end of a line, and "!" is the end of the pattern.
+    /// A number before them is the count of the repetition.</remarks>
     class RlePattern final
     {
     public:
@@ -365,6 +386,7 @@ private:
 
             const auto [width, height] = GetRleSize(lines.front());
 
+            // The cells may continue over several lines.
             std::string rlePattern;
             for (const auto& line : lines | std::views::drop(1))
                 rlePattern += line;
@@ -372,11 +394,12 @@ private:
             return Pattern(File::GetStem(filePath), RleToPattern(rlePattern, width, height), width);
         }
 
+        /// <summary>Decodes the RLE cells into the format of Pattern ('*' or '.', width * height characters).</summary>
         static std::string RleToPattern(std::string_view rlePattern, UnsignedInteger width, UnsignedInteger height)
         {
             std::string pattern;
-            std::string partPattern;
-            size_t      count = 0U;
+            std::string partPattern; // The current line
+            size_t      count = 0U;  // The number before the tag. 0 means no number, and is taken as 1.
             for (size_t index = 0U; index < rlePattern.length(); index++) {
                 const auto character = std::tolower(static_cast<unsigned char>(rlePattern[index]));
                 if (std::isdigit(character)) {
@@ -418,6 +441,7 @@ private:
                 pattern.append(length - pattern.length(), '.');
         }
 
+        /// <summary>Appends the line to the pattern, padded or cut to the width.</summary>
         static void AppendPartPattern(const std::string& partPattern, UnsignedInteger width, std::string& pattern)
         {
             if (partPattern.length() < width)
@@ -426,6 +450,8 @@ private:
                 pattern.append(partPattern, 0, width);
         }
 
+        /// <summary>Reads the number that starts at the index.</summary>
+        /// <param name="index">Moved to the last digit of the number, so that the loop of the caller goes on to the next character.</param>
         static size_t GetRleCount(std::string_view rlePattern, size_t& index)
         {
             size_t count  = 0U;
@@ -441,6 +467,8 @@ private:
             return count;
         }
 
+        /// <summary>Reads the width and the height from the header "x = m, y = n, rule = ...". The rule is ignored.</summary>
+        /// <returns>0 for a value that cannot be read.</returns>
         static std::tuple<UnsignedInteger, UnsignedInteger> GetRleSize(std::string rule)
         {
             std::erase_if(rule, [](unsigned char character) { return std::isspace(character); });
@@ -463,13 +491,17 @@ private:
     };
 };
 
+/// <summary>Cells stored one bit per cell, in the layout of a monochrome bitmap.</summary>
+/// <remarks>The base class of Board when USEBITS is defined. Otherwise, Board uses it only to make the bitmap to paint.</remarks>
 class BitCellSet
 {
     const Size                     size;
-    const UnsignedInteger          unitNumberX;
+    const UnsignedInteger          unitNumberX; // Number of the units (bytes) in a row
     std::unique_ptr<UnitInteger[]> cells;
 
 #if defined(AREA)
+    // The active area: every cell outside of it is dead.
+    // It is the bounding rectangle of the alive cells, with a margin of one cell for the cells to be born.
     Rect                           area;
 #endif // AREA
 
@@ -481,6 +513,7 @@ public:
 #if defined(AREA)
     { return area; }
 
+    /// <summary>The 3x3 cells at the center of the rectangle. Used when no cells are alive, so that the area is not empty.</summary>
     static Rect GetDefaultArea(const Rect& rect)
     { return Rect(Point(rect.leftTop.x + std::max(0, rect.size.cx / 2 - 1), rect.leftTop.y + std::max(0, rect.size.cy / 2 - 1)), Size(std::min(rect.size.cx, 3), std::min(rect.size.cy, 3))); }
 
@@ -525,6 +558,8 @@ public:
         return (cells[index] & (1 << bit)) != 0;
     }
 
+    /// <summary>Sets the cell. With AREA, setting an alive cell also extends the area to contain the cell and its neighbors.</summary>
+    /// <remarks>The area is not shrunk by setting a dead cell.</remarks>
     void Set(const Point& point, bool value)
     {
 #if defined(AREA)
@@ -537,6 +572,7 @@ public:
             cells[index] |= 1 << bit;
             area = Union(area, GetRect(), point);
 #if defined(_DEBUG)
+            // The cell is inside the area with the margin, unless it is on the edge of the board.
             const auto rightBottom     = GetRect().RightBottom();
             const auto areaRightBottom = area     .RightBottom();
             assert(point.x == GetRect().leftTop.x || point.x == rightBottom.x - 1 || (area.leftTop.x < point.x && point.x < areaRightBottom.x - 1));
@@ -550,6 +586,7 @@ public:
 #endif // AREA
     }
 
+    /// <summary>Sets the cell without updating the area.</summary>
     void SetOnly(const Point& point, bool value)
     {
         UnsignedInteger index;
@@ -561,6 +598,7 @@ public:
               : (cells[index] &= ~(1 << bit));
     }
 
+    /// <summary>Kills all the cells.</summary>
     void Clear()
     {
         std::fill_n(cells.get(), GetUnitNumber(), UnitInteger(0));
@@ -575,6 +613,7 @@ public:
 #endif // FAST
 
 #if defined(AREA)
+    /// <summary>Extends the area to contain the point and its neighbors, within the rectangle (the board).</summary>
     static Rect Union(const Rect& area, const Rect& rect, const Point& point)
     {
         const auto rightBottom     = rect.RightBottom();
@@ -606,12 +645,16 @@ public:
 #if !defined(AREA) || !defined(MT)
 protected:
 #endif // !AREA || !MT
+    /// <summary>The whole board.</summary>
+    /// <remarks>Public with AREA and MT, because Game::NextPart calls it.</remarks>
     Rect GetRect() const
     { return Rect(Point(), size); }
 
 private:
+    /// <summary>Union of one axis: extends [areaMinimum, areaMaximum) to contain [value - 1, value + 1], within [minimum, maximum).</summary>
     static void Union(Integer& areaMinimum, Integer& areaMaximum, Integer minimum, Integer maximum, Integer value)
     {
+        // "+ 1 + 1": one for the neighbor, and one for the exclusive end.
         areaMinimum = std::max(std::min(areaMinimum, value - 1    ), minimum);
         areaMaximum = std::min(std::max(areaMaximum, value + 1 + 1), maximum);
 #if defined(_DEBUG)
@@ -630,6 +673,7 @@ private:
             return false;
 
         // The leftmost pixel is the most significant bit in a monochrome bitmap.
+        // Each row starts at its own byte, so that threads computing different rows never write the same byte.
         constexpr auto bitNumber = sizeof(UnitInteger) * 8;
         index                    = UnsignedInteger(unitNumberX * point.y + point.x / bitNumber);
         bit                      = Byte(bitNumber - 1 - point.x % bitNumber);
@@ -638,14 +682,15 @@ private:
 };
 
 #if !defined(USEBITS)
+/// <summary>The board of cells, one bool per cell.</summary>
 class Board final
 {
     const Size                          size;
     std::vector<std::unique_ptr<bool[]>> cells; // cells[y][x]
-    BitCellSet                          bitCellSet;
+    BitCellSet                          bitCellSet; // Only to make the bitmap to paint
 
 #if defined(AREA)
-    Rect                                area;
+    Rect                                area;   // The same as BitCellSet::area
 #endif // AREA
 
 public:
@@ -662,6 +707,7 @@ public:
     { return GetRect(); }
 #endif // AREA
 
+    /// <summary>Converts the cells into the bits of a monochrome bitmap (see BitCellSet::GetBits).</summary>
     UnitInteger* GetBits()
     {
         bitCellSet.Clear();
@@ -692,6 +738,8 @@ public:
     Board(const Board&)            = delete;
     Board& operator=(const Board&) = delete;
 
+    /// <summary>Clears the board, and places the pattern at the center.</summary>
+    /// <returns>false if the pattern is larger than the board.</returns>
     bool Set(const Pattern& pattern)
     {
         const auto patternSize    = pattern.GetSize();
@@ -731,6 +779,7 @@ public:
     }
 #endif // FAST
 
+    /// <summary>Counts the alive cells among the 8 neighbors. Cells outside the board are dead.</summary>
     UnsignedInteger GetAliveNeighborCount(const Point& point) const
     {
 #if defined(FAST)
@@ -757,6 +806,7 @@ public:
     bool Get(const Point& point) const
     { return GetRect().IsIn(point) ? cells[size_t(point.y)][point.x] : false; }
 
+    /// <summary>Sets the cell. With AREA, setting an alive cell also extends the area (see BitCellSet::Set).</summary>
     void Set(const Point& point, bool value)
     {
         SetOnly(point, value);
@@ -766,6 +816,7 @@ public:
 #endif // AREA
     }
 
+    /// <summary>Sets the cell without updating the area. Unlike Get, the point must be inside the board.</summary>
     void SetOnly(const Point& point, bool value)
     { cells[size_t(point.y)][point.x] = value; }
 
@@ -781,18 +832,22 @@ private:
     }
 
 #if defined(AREA)
-public:
+public: // Game calls it with AREA.
 #endif // AREA
+    /// <summary>The whole board.</summary>
     Rect GetRect() const
     { return Rect(Point(), size); }
 };
 #else // USEBITS
+/// <summary>The board of cells, one bit per cell. The bits are painted as they are.</summary>
 class Board final : public BitCellSet
 {
 public:
     Board(const Size& size) : BitCellSet(size)
     {}
 
+    /// <summary>Clears the board, and places the pattern at the center.</summary>
+    /// <returns>false if the pattern is larger than the board.</returns>
     bool Set(const Pattern& pattern)
     {
         const auto patternSize    = pattern.GetSize();
@@ -828,6 +883,7 @@ public:
     }
 #endif // !FAST
 
+    /// <summary>Counts the alive cells among the 8 neighbors. Cells outside the board are dead.</summary>
     UnsignedInteger GetAliveNeighborCount(const Point& point) const
     {
 #if defined(FAST)
@@ -859,14 +915,16 @@ public:
 };
 #endif // USEBITS
 
+/// <summary>Conway's Game of Life (B3/S23): a dead cell with 3 alive neighbors is born, and an alive cell with 2 or 3 alive neighbors survives.</summary>
+/// <remarks>The next generation is computed from mainBoard into subBoard, and then the boards are swapped.</remarks>
 class Game final
 {
     Random                 random;
-    std::unique_ptr<Board> mainBoard;
-    std::unique_ptr<Board> subBoard;
+    std::unique_ptr<Board> mainBoard;    // The current generation
+    std::unique_ptr<Board> subBoard;     // The next generation
     unsigned long long     generation = 0ULL;
     PatternSet             patternSet;
-    std::optional<size_t>  patternIndex;
+    std::optional<size_t>  patternIndex; // None when the board is random
 #if defined(AREA) && defined(MT)
     std::vector<Rect>      areas; // One for each thread
 #endif // AREA && MT
@@ -893,6 +951,7 @@ public:
     Game(const Game&)            = delete;
     Game& operator=(const Game&) = delete;
 
+    /// <summary>Advances the board by one generation.</summary>
     void Next()
     {
 #if defined(AREA)
@@ -906,6 +965,8 @@ public:
         const auto areaRightBottom = area.RightBottom();
 
 #if defined(AREA)
+        // Each thread extends its own area, not the area of subBoard, to avoid a data race.
+        // The areas are merged after all the threads have joined.
         std::ranges::fill(areas, BitCellSet::GetEmptyArea(mainBoard->GetSize()));
 
         ThreadUtility::ForEach(area.leftTop.y, areaRightBottom.y, [=, this](Integer minimum, Integer maximum, unsigned int index) {
@@ -937,13 +998,15 @@ public:
 #endif // AREA
 
 #if defined(_DEBUG)
-        Test(*mainBoard);
+        Test(*mainBoard); // Checks the invariant of AREA
 #endif // _DEBUG
 
         std::swap(mainBoard, subBoard);
         generation++;
     }
 
+    /// <summary>Resets the generation to 0.</summary>
+    /// <param name="randomize">true to fill the board at random. false to keep the cells (e.g. just after SetPattern).</param>
     void Reset(bool randomize)
     {
         if (randomize) {
@@ -953,6 +1016,8 @@ public:
         generation = 0ULL;
     }
 
+    /// <summary>Places the pattern of the index (the order of PatternSet) on the boards.</summary>
+    /// <returns>false if there is no pattern of the index.</returns>
     bool SetPattern(int index)
     {
         if (index < 0 || patternSet.GetSize() <= size_t(index)) {
@@ -966,6 +1031,7 @@ public:
     }
 
 private:
+    /// <summary>Makes each cell alive with a probability of 1/2.</summary>
     void Randomize()
     {
 #if defined(FAST)
@@ -1010,6 +1076,9 @@ private:
 #endif // AREA
 
 #if defined(AREA) && defined(MT)
+    /// <summary>Computes the next generation of the cells in [minimum, maximum). Called by each thread.</summary>
+    /// <param name="area">The area of the thread, extended by the alive cells.</param>
+    /// <remarks>SetOnly is used so that the area of subBoard shared by the threads is not updated.</remarks>
     void NextPart(const Point& minimum, const Point& maximum, Rect& area)
     {
         Point point;
@@ -1025,6 +1094,7 @@ private:
         }
     }
 #elif defined(FAST) || defined(MT)
+    /// <summary>Computes the next generation of the cells in [minimum, maximum).</summary>
     void NextPart(const Point& minimum, const Point& maximum)
     {
         Point point;
@@ -1038,6 +1108,7 @@ private:
 #endif // FAST
 
 #if defined(_DEBUG)
+    /// <summary>Checks that the area is inside the board, and that every cell outside of the area is dead.</summary>
     static void Test(const Board& board)
     {
         const auto size = board.GetSize();

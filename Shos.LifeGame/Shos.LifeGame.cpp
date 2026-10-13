@@ -8,6 +8,7 @@
 #include "ShosWin32.h"
 #include "ShosStopwatch.h"
 
+// Define LAP_TIMES to keep showing the generation, the time, and the FPS at the generation of LAP_TIMES.
 //#define LAP_TIMES   1000
 
 namespace Shos::LifeGame::Application {
@@ -19,6 +20,8 @@ using namespace Shos::LifeGame;
 using namespace Shos::LifeGame::Win32;
 using namespace Shos::Win32;
 
+/// <summary>The window that shows the board at its center, and the generation and the FPS in its title bar.</summary>
+/// <remarks>A key sets the pattern of the key (see KeyToIndex). A key without a pattern, or a right click, fills the board at random.</remarks>
 class MainWindow final : public Window
 {
 #if defined(TIMER)
@@ -29,8 +32,8 @@ class MainWindow final : public Window
     static constexpr TCHAR windowClassName[] = _T("ShosLifeGameMainWindow");
 
     Game                   game{ Size(1000, 1000) };
-    POINT                  paintPosition{};
-    RECT                   renderingArea{};
+    POINT                  paintPosition{}; // Left-top of the board in the client area
+    RECT                   renderingArea{}; // The board in the client area, invalidated every generation
 #if defined(TIMER)
     std::unique_ptr<Timer> timer;
 #endif // TIMER
@@ -65,6 +68,7 @@ protected:
     { Next(); }
 #endif // TIMER
 
+    // Fills the board at random, unless the key has a pattern.
     void OnChar(TCHAR character) override
     { Reset(!game.SetPattern(KeyToIndex(character))); }
 
@@ -72,12 +76,14 @@ protected:
     { Reset(true); }
 
 private:
+    /// <returns>'0'-'9': 0-9, 'a'-'z': 10-35, 'A'-'Z': 36-61, and -1 for other keys.</returns>
     static int KeyToIndex(TCHAR character)
     { return _istalpha(character) ? AlphaToIndex(character) : (_istdigit(character) ? character - '0' : -1); }
 
     static int AlphaToIndex(TCHAR character)
     { return _istlower(character) ? character - 'a' + 10 : character - 'A' + 10 + 26; }
 
+    /// <summary>The left-top position to place the board at the center of the client area.</summary>
     POINT PaintPosition() const
     {
         const auto clientCenter = Center(GetClientRect());
@@ -91,8 +97,10 @@ private:
     static POINT Center(const RECT& rect)
     { return { (rect.left + rect.right) / 2, (rect.top + rect.bottom) / 2 }; }
 
+    /// <summary>Advances one generation, and requests to paint the board and updates the title.</summary>
     void Next()
     {
+        // The time is measured from the first generation, not from the start of the program.
         if (!watch.is_running())
             watch.start();
 
@@ -101,6 +109,7 @@ private:
         SetTitle();
     }
 
+    /// <summary>Resets the generation and the time, so that the FPS is measured again.</summary>
     void Reset(bool randomize)
     {
         game.Reset(randomize);
@@ -122,6 +131,8 @@ private:
     static inline Lap lap;
 #endif //LAP_TIMES
 
+    /// <summary>The title with the generation, the time, the FPS, and the name of the pattern.</summary>
+    /// <remarks>The FPS here (generations per second since the last reset) is the one used in the benchmark of the article.</remarks>
     tstring GetTitle() const
     {
         auto    generation  = game.GetGeneration();
@@ -153,6 +164,7 @@ private:
     }
 };
 
+/// <summary>The application, with MainWindow as the main window.</summary>
 class Program : public Shos::Win32::Program
 {
     MainWindow mainWindow;
