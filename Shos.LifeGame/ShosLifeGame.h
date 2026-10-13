@@ -531,10 +531,14 @@ public:
 #if defined(AREA)
 #endif // AREA
 
+    /// <summary>Bits in the layout of a monochrome bitmap (see GetRowByteNumber).</summary>
     UnitInteger* GetBits() const
     { return cells; }
 
-    /// <remarks>size.cx must be a multiple of 8.</remarks>
+    /// <summary>Bytes per row of the bits, which is WORD-aligned like a monochrome bitmap.</summary>
+    static UnsignedInteger GetRowByteNumber(Integer width)
+    { return UnsignedInteger((width + 15) / 16 * 2); }
+
     BitCellSet(const Size& size) : size(size)
 #if defined(AREA)
         , area(GetDefaultArea(Rect(Point(), size)))
@@ -667,11 +671,8 @@ private:
 
     void InitializeUnitNumberX()
     {
-        unitNumberX = size.cx / sizeof(UnitInteger);
-        if (size.cx % sizeof(UnitInteger) != 0) {
-            assert(false);
-            unitNumberX++;
-        }
+        static_assert(sizeof(UnitInteger) == sizeof(Byte));
+        unitNumberX = GetRowByteNumber(size.cx);
     }
 
     UnsignedInteger GetUnitNumber() const
@@ -682,9 +683,10 @@ private:
         if (!GetRect().IsIn(point))
             return false;
 
+        // The leftmost pixel is the most significant bit in a monochrome bitmap.
         constexpr auto bitNumber = sizeof(UnitInteger) * 8;
         const auto index         = UnsignedInteger(unitNumberX * point.y + point.x / bitNumber);
-        const auto bit           = Byte(point.x % bitNumber);
+        const auto bit           = Byte(bitNumber - 1 - point.x % bitNumber);
         bitIndex                 = { index, bit };
         return true;
     }
@@ -733,7 +735,6 @@ public:
         return bitCellSet->GetBits();
     }
 
-    /// <remarks>size.cx must be a multiple of 8.</remarks>
     Board(const Size& size) : size(size), bitCellSet(nullptr)
 #if defined(AREA)
         , area(BitCellSet::GetDefaultArea(Rect(Point(), size)))

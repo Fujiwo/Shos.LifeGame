@@ -445,9 +445,29 @@ void BitmapRowIsWordAlignedPackedBits()
 {
     const Integer width  = 40;
     const auto    stride = size_t((width + 15) / 16 * 2); // bytes per row of the DDB
+    CHECK_EQ(stride, size_t(BitCellSet::GetRowByteNumber(width)));
     WithBits(Size(width, 4), { { 0, 1 } }, [&](const UnitInteger* bits) {
         CHECK(bits[stride] != 0);
     });
+}
+
+void BitmapMatchesBoard()
+{
+    // Every pixel of the bitmap (including widths that are not a multiple of 8) matches the board.
+    for (const auto& size : { Size(64, 40), Size(37, 11), Size(17, 5) }) {
+        const auto cells = MakeRandomCells(size, 5U, 40);
+        WithBits(size, cells, [&](const UnitInteger* bits) {
+            const auto stride = size_t(BitCellSet::GetRowByteNumber(size.cx));
+            Cells      pixels;
+            for (Integer y = 0; y < size.cy; y++) {
+                for (Integer x = 0; x < size.cx; x++) {
+                    if ((bits[size_t(y) * stride + size_t(x / 8)] & (0x80 >> (x % 8))) != 0)
+                        pixels.insert({ x, y });
+                }
+            }
+            CHECK_EQ(cells, pixels);
+        });
+    }
 }
 
 // ---- Pattern file tests (review 3.3, 3.4, 3.12) ----------------------------
@@ -637,8 +657,9 @@ int Run()
         { "AreaSurroundsPattern"                     , Expect::Pass    , ""   , AreaSurroundsPattern                    },
         { "TooLargePatternIsRejected"                , Expect::Pass    , ""   , TooLargePatternIsRejected               },
         { "RandomBoardMatchesReference"              , Expect::Pass    , ""   , RandomBoardMatchesReference             },
-        { "BitmapLeftmostPixelIsMostSignificantBit"  , Expect::KnownBug, "3.5", BitmapLeftmostPixelIsMostSignificantBit },
-        { "BitmapRowIsWordAlignedPackedBits"         , Expect::KnownBug, "3.6", BitmapRowIsWordAlignedPackedBits        },
+        { "BitmapLeftmostPixelIsMostSignificantBit"  , Expect::Pass    , ""   , BitmapLeftmostPixelIsMostSignificantBit },
+        { "BitmapRowIsWordAlignedPackedBits"         , Expect::Pass    , ""   , BitmapRowIsWordAlignedPackedBits        },
+        { "BitmapMatchesBoard"                       , Expect::Pass    , ""   , BitmapMatchesBoard                      },
         { "LifBasic"                                 , Expect::Pass    , ""   , LifBasic                                },
         { "LifNameIsFileStem"                        , Expect::Pass    , ""   , LifNameIsFileStem                       },
         { "LifSkipsBangCommentLines"                 , Expect::Pass    , ""   , LifSkipsBangCommentLines                },

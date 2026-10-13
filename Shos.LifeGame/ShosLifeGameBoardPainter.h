@@ -25,7 +25,7 @@ private:
         bitmap.bmWidth      = board.GetSize().cx;
         bitmap.bmHeight     = board.GetSize().cy;
         bitmap.bmPlanes     = 1;
-        bitmap.bmWidthBytes = board.GetSize().cx / sizeof(Byte);
+        bitmap.bmWidthBytes = LONG(BitCellSet::GetRowByteNumber(board.GetSize().cx));
         bitmap.bmBitsPixel  = 1;
         bitmap.bmBits       = board.GetBits();
 
