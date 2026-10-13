@@ -1,9 +1,12 @@
 #pragma once
 
-//#define USEBITS // Bits enabled
+// Define SHOS_LIFEGAME_CUSTOM_CONFIG to choose the following options outside this file (e.g. in tests).
+#if !defined(SHOS_LIFEGAME_CUSTOM_CONFIG)
+#define USEBITS // Bits enabled
 #define FAST    // Fast loops enabled
 #define MT      // Multi-threading enabled
 #define AREA    // Area enabled
+#endif // SHOS_LIFEGAME_CUSTOM_CONFIG
 
 #include <string>
 #include <functional>
@@ -252,10 +255,8 @@ public:
     const Pattern& operator[](size_t index) const
     { return patterns[index]; }
 
-    PatternSet()
+    PatternSet(const tstring& folderName = _T(".\\CellData"))
     {
-        const auto folderName = _T(".\\CellData");
-
         std::vector<Pattern> patterns5;
         Pattern5::ReadFromFolder(folderName, patterns5);
         Helper::Connect<std::vector<Pattern>>(patterns, patterns5);
