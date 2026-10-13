@@ -27,7 +27,7 @@ C++20 と Win32 API だけで書いた高速ライフゲーム (B3/S23)。最適
 ## アーキテクチャ
 
 ### 最適化の `#define` (`ShosLifeGame.h` の冒頭)
-- `USEBITS`: `Board` が `BitCellSet` (1 セル 1 ビット) を継承する。未定義の場合は、`bool**` を使う別実装の `Board` になる。2 つの `Board` は同じインターフェイス (`Get`/`Set`/`SetOnly`/`GetArea`/`SetArea`/`GetBits`) を持つ必要がある。
+- `USEBITS`: `Board` が `BitCellSet` (1 セル 1 ビット) を継承する。未定義の場合は、行ごとの `bool` 配列 (`std::vector<std::unique_ptr<bool[]>>`) を使う別実装の `Board` になる。2 つの `Board` は同じインターフェイス (`Get`/`Set`/`SetOnly`/`GetArea`/`SetArea`/`GetBits`) を持つ必要がある。
 - `FAST`: `std::function` を使う汎用ループ (`Utility::ForEach`) の代わりに、直接のループを使う。
 - `MT`: 計算する範囲を行 (Y 方向) で分け、スレッドごとに `NextPart` を実行する。`AREA` も有効なら、スレッドごとに範囲 (`areas[index]`) を持ち、最後に `Rect::Union` でまとめる。
 - `AREA`: 活動範囲だけを計算する。

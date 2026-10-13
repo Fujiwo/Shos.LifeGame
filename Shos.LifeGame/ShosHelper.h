@@ -1,14 +1,13 @@
 #pragma once
 
 #include <algorithm>
-#include <cassert>
 #include <cctype>
 #include <filesystem>
-#include <functional>
-#include <iterator>
 #include <fstream>
-#include <string>
 #include <sstream>
+#include <string>
+#include <string_view>
+#include <system_error>
 #include <vector>
 
 namespace Shos {
@@ -19,69 +18,17 @@ using tstring = std::wstring;
 using tstring = std::string;
 #endif // UNICODE
 
-class Helper final
-{
-public:
-    template <typename TCollection, typename TElement>
-    static void ForEach(const TCollection& collection, std::function<void(const TElement&)> action)
-    {
-        for (const auto& element : collection)
-            action(element);
-    }
-
-    template <typename TSourceCollection, typename TDestinationCollection, typename TSourceElement, typename TDestinationElement>
-    static void Map(const TSourceCollection& source, TDestinationCollection& destination, std::function<TDestinationElement(const TSourceElement&)> map)
-    {
-        destination.clear();
-        for (const auto& element : source)
-            destination.push_back(map(element));
-    }
-
-    template <typename TCollection, typename TElement>
-    static void Filter(const TCollection& source, TCollection& destination, std::function<bool(const TElement&)> isMatch)
-    {
-        destination.clear();
-        for (const auto& element : source) {
-            if (isMatch(element))
-                destination.push_back(element);
-        }
-    }
-
-    template <typename TCollection, typename TElement, typename TSizeType = size_t>
-    static TSizeType Maximum(const TCollection& collection, std::function<TSizeType(const TElement&)> getValue)
-    {
-        assert(collection.size() > 0);
-
-        std::vector<TSizeType> values;
-        Map<TCollection, std::vector<TSizeType>, TElement, TSizeType>(collection, values, getValue);
-        auto iterator = std::max_element(values.begin(), values.end());
-        return *iterator;
-    }
-
-    template <typename TCollection>
-    static void Connect(TCollection& target, const TCollection& collection)
-    { std::copy(collection.begin(), collection.end(), std::back_inserter(target)); }
-
-    template <typename TCollection>
-    static std::string Connect(const TCollection& texts)
-    {
-        std::ostringstream stream;
-        ForEach<TCollection, std::string>(texts, [&](const std::string& text) { stream << text; });
-        return stream.str();
-    }
-};
-
 class String final
 {
 public:
-    static std::string Trim(std::string source)
+    static std::string Trim(std::string_view source)
     {
-        const std::string TRIM_CHARACTERS = " \t\r\n";
+        constexpr std::string_view trimCharacters = " \t\r\n";
 
-        auto start    = source.find_first_not_of(TRIM_CHARACTERS);
-        auto end      = source.find_last_not_of (TRIM_CHARACTERS);
-        return start == std::string::npos || end == std::string::npos ? std::string()
-                                                                      : source.substr(start, end - start + 1);
+        const auto start = source.find_first_not_of(trimCharacters);
+        const auto end   = source.find_last_not_of (trimCharacters);
+        return start == std::string_view::npos ? std::string()
+                                               : std::string(source.substr(start, end - start + 1));
     }
 
     static std::string Adjust(std::string text, char character, size_t width)
@@ -94,20 +41,17 @@ public:
     static std::vector<std::string> Split(const std::string& text, char delimiter)
     {
         std::vector<std::string> tokens;
-        std::stringstream        stream(text);
+        std::istringstream       stream(text);
         std::string              token;
         while (std::getline(stream, token, delimiter))
-           tokens.push_back(token);
+            tokens.push_back(token);
         return tokens;
     }
 
-    static std::string ToLower(const std::string& text)
+    static std::string ToLower(std::string text)
     {
-        std::string result;
-
-        result.resize(text.size());
-        std::transform(text.begin(), text.end(), result.begin(), [](unsigned char character) { return char(std::tolower(character)); });
-        return result;
+        std::ranges::transform(text, text.begin(), [](unsigned char character) { return char(std::tolower(character)); });
+        return text;
     }
 };
 
@@ -115,62 +59,51 @@ class File final
 {
 public:
     /// <summary>Gets the paths of the files whose extension matches (case-insensitive), sorted by file name.</summary>
-    static bool GetFilePaths(tstring folderPath, std::vector<tstring>& filePaths, std::string extension)
+    static std::vector<tstring> GetFilePaths(const tstring& folderPath, std::string_view extension)
     {
-        using namespace std::filesystem;
+        namespace fs = std::filesystem;
 
-        filePaths.clear();
-        if (!is_directory(folderPath))
-            return false;
+        if (!fs::is_directory(folderPath))
+            return {};
 
-        directory_iterator end;
-        std::error_code    err;
-        std::vector<path>  paths;
-
-        for (directory_iterator iterator(folderPath); iterator != end && !err; iterator.increment(err)) {
+        const auto        lowerExtension = String::ToLower(std::string(extension));
+        std::error_code   error;
+        std::vector<fs::path> paths;
+        for (fs::directory_iterator iterator(folderPath, error), end; iterator != end && !error; iterator.increment(error)) {
             const auto& path = iterator->path();
-            if (String::ToLower(path.extension().string()) == String::ToLower(extension))
+            if (String::ToLower(path.extension().string()) == lowerExtension)
                 paths.push_back(path);
         }
 
-        std::sort(paths.begin(), paths.end(), [](const path& path1, const path& path2) {
-            return String::ToLower(path1.filename().string()) < String::ToLower(path2.filename().string());
-        });
+        std::ranges::sort(paths, {}, [](const fs::path& path) { return String::ToLower(path.filename().string()); });
 
+        std::vector<tstring> filePaths;
         for (const auto& path : paths)
-            filePaths.push_back(path
-#if defined(UNICODE) || defined(_UNICODE)
-                .wstring()
-#else // UNICODE
-                .string ()
-#endif // UNICODE
-            );
-        return !err;
+            filePaths.push_back(ToTString(path));
+        return filePaths;
     }
 
-    static tstring GetStem(tstring filePath)
-    {
-        std::filesystem::path path = filePath;
-        return path.stem()
-#if defined(UNICODE) || defined(_UNICODE)
-            .wstring();
-#else // UNICODE
-            .string ();
-#endif // UNICODE
-    }
+    static tstring GetStem(const tstring& filePath)
+    { return ToTString(std::filesystem::path(filePath).stem()); }
 
-    static bool Read(tstring fileName, std::vector<std::string>& lines)
+    /// <returns>The lines of the file, or no lines when the file cannot be read.</returns>
+    static std::vector<std::string> Read(const tstring& fileName)
     {
-        std::ifstream stream(fileName);
-        if (!stream.is_open())
-            return false;
-
-        lines.clear();
-        std::string line;
-        while (getline(stream, line))
+        std::vector<std::string> lines;
+        std::ifstream            stream{ std::filesystem::path(fileName) };
+        for (std::string line; std::getline(stream, line); )
             lines.push_back(line);
+        return lines;
+    }
 
-        return true;
+private:
+    static tstring ToTString(const std::filesystem::path& path)
+    {
+#if defined(UNICODE) || defined(_UNICODE)
+        return path.wstring();
+#else // UNICODE
+        return path.string();
+#endif // UNICODE
     }
 };
 

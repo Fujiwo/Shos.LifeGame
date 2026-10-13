@@ -1,12 +1,12 @@
 #include <tchar.h>
-#include <sstream>
+#include <filesystem>
 #include <iomanip>
+#include <memory>
+#include <sstream>
 
 #include "ShosLifeGameBoardPainter.h"
 #include "ShosWin32.h"
 #include "ShosStopwatch.h"
-
-using namespace std;
 
 //#define LAP_TIMES   1000
 
@@ -25,72 +25,51 @@ class MainWindow final : public Window
     static constexpr UINT_PTR timerId                  = 1U;
     static constexpr UINT     timerTimeoutMilliseconds = 100U;
 #endif // TIMER
-    static const TCHAR  title[];
-    static const TCHAR  windowClassName[];
+    static constexpr TCHAR title[]           = _T("Shos.LifeGame"         );
+    static constexpr TCHAR windowClassName[] = _T("ShosLifeGameMainWindow");
 
-    Game      game;
-    POINT     paintPosition;
-    RECT      renderingArea;
+    Game                   game{ Size(1000, 1000) };
+    POINT                  paintPosition{};
+    RECT                   renderingArea{};
 #if defined(TIMER)
-    Timer*    timer;
+    std::unique_ptr<Timer> timer;
 #endif // TIMER
-    stopwatch watch;
+    stopwatch              watch;
 
 public:
-    MainWindow() : game({ 1000, 1000 }), paintPosition({ 0, 0 }), renderingArea({ 0, 0, 0, 0 })
-#if defined(TIMER)
-        , timer(nullptr)
-#endif // TIMER
-    {}
-
-#if defined(TIMER)
-    ~MainWindow()
-    { delete timer; }
-#endif // TIMER
-
     bool Create(HINSTANCE instanceHandle, int showCommand)
     { return Window::Create(instanceHandle, windowClassName, title, showCommand); }
 
 #if defined(IDLE)
-    virtual void OnIdle() override
+    void OnIdle() override
     { Next(); }
 #endif // IDLE
 
 protected:
 #if defined(TIMER)
-    virtual void OnCreate() override
-    { timer = new Timer(*this, timerId, timerTimeoutMilliseconds); }
+    void OnCreate() override
+    { timer = std::make_unique<Timer>(*this, timerId, timerTimeoutMilliseconds); }
 #endif // TIMER
 
-    virtual void OnSize(SIZE size) override
+    void OnSize([[maybe_unused]] SIZE size) override
     {
-        UNREFERENCED_PARAMETER(size);
-
         paintPosition = PaintPosition();
         renderingArea = RenderingArea();
     }
 
-    virtual void OnPaint(HDC deviceContextHandle) override
+    void OnPaint(HDC deviceContextHandle) override
     { BoardPainter::Paint(deviceContextHandle, paintPosition, game.GetBoard()); }
 
 #if defined(TIMER)
-    virtual void OnTimer(int timerId) override
-    {
-        UNREFERENCED_PARAMETER(timerId);
-
-        Next();
-    }
+    void OnTimer([[maybe_unused]] int timerId) override
+    { Next(); }
 #endif // TIMER
 
-    virtual void OnChar(TCHAR character) override
+    void OnChar(TCHAR character) override
     { Reset(!game.SetPattern(KeyToIndex(character))); }
 
-    virtual void OnRightButtonUp(const POINT& point) override
-    {
-        UNREFERENCED_PARAMETER(point);
-
-        Reset(true);
-    }
+    void OnRightButtonUp([[maybe_unused]] const POINT& point) override
+    { Reset(true); }
 
 private:
     static int KeyToIndex(TCHAR character)
@@ -135,12 +114,12 @@ private:
     struct Lap
     {
         unsigned long long generation = 0;
-        double             elapsed = 0.0;
+        double             elapsed    = 0.0;
 
-        double GetFps() { return elapsed > 0.0 ? generation / elapsed : 0.0; }
+        double GetFps() const { return elapsed > 0.0 ? generation / elapsed : 0.0; }
     };
 
-    static Lap lap;
+    static inline Lap lap;
 #endif //LAP_TIMES
 
     tstring GetTitle() const
@@ -174,40 +153,27 @@ private:
     }
 };
 
-const TCHAR MainWindow::title[]           = _T("Shos.LifeGame"         );
-const TCHAR MainWindow::windowClassName[] = _T("ShosLifeGameMainWindow");
-
-#if defined(LAP_TIMES)
-MainWindow::Lap MainWindow::lap;
-#endif //LAP_TIMES
-
 class Program : public Shos::Win32::Program
 {
     MainWindow mainWindow;
 
 protected:
-    virtual Window* CreateMainWindow(HINSTANCE instanceHandle, int showCommand) override
+    Window* CreateMainWindow(HINSTANCE instanceHandle, int showCommand) override
     { return mainWindow.Create(instanceHandle, showCommand) ? &mainWindow : nullptr; }
 };
 } // namespace Shos::LifeGame::Application
 
-int APIENTRY _tWinMain(_In_     HINSTANCE instanceHandle        ,
-                       _In_opt_ HINSTANCE previousInstanceHandle,
-                       _In_     LPTSTR    commandLine           ,
-                       _In_     int       showCommand           )
+int APIENTRY _tWinMain(                  _In_     HINSTANCE instanceHandle        ,
+                       [[maybe_unused]] _In_opt_ HINSTANCE previousInstanceHandle,
+                       [[maybe_unused]] _In_     LPTSTR    commandLine           ,
+                                        _In_     int       showCommand           )
 {
-    UNREFERENCED_PARAMETER(previousInstanceHandle);
-    UNREFERENCED_PARAMETER(commandLine           );
-
     // Patterns are read from ".\CellData". Make it relative to the executable, not to where it was started from.
-    TCHAR modulePath[MAX_PATH];
+    TCHAR modulePath[MAX_PATH]{};
     const auto length = ::GetModuleFileName(nullptr, modulePath, MAX_PATH);
     if (0 < length && length < MAX_PATH) {
-        const auto separator = _tcsrchr(modulePath, _T('\\'));
-        if (separator != nullptr) {
-            *separator = _T('\0');
-            ::SetCurrentDirectory(modulePath);
-        }
+        std::error_code error;
+        std::filesystem::current_path(std::filesystem::path(modulePath).parent_path(), error);
     }
 
     Shos::LifeGame::Application::Program().Run(instanceHandle, showCommand);

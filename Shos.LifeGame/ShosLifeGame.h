@@ -12,15 +12,22 @@
 #include <functional>
 #include <tuple>
 #if defined(MT)
+#include <concepts>
 #include <thread>
 #endif // MT
 
 #include <cstdint>
 #include <random>
 #include <algorithm>
+#include <cctype>
+#include <iterator>
+#include <memory>
+#include <optional>
+#include <ranges>
+#include <span>
 #include <sstream>
-#include <cstdlib>
-#include <cstring>
+#include <utility>
+#include <vector>
 #include <cassert>
 #include <tchar.h>
 #include "ShosHelper.h"
@@ -38,49 +45,44 @@ using UnitInteger     = Byte         ;
 class Random final
 {
     std::random_device rd;
-    std::mt19937       engine;
+    std::mt19937       engine{ rd() };
 
 public:
-    Random() : engine(rd())
-    {}
-
     std::uint32_t Next()
     { return engine(); }
 };
 
 struct Size final
 {
-    Integer cx;
-    Integer cy;
+    Integer cx = 0;
+    Integer cy = 0;
 
-    Size() : cx(0), cy(0)
+    constexpr Size() = default;
+
+    constexpr Size(Integer cx, Integer cy) : cx(cx), cy(cy)
     {}
 
-    Size(Integer cx, Integer cy) : cx(cx), cy(cy)
-    {}
-
-    bool operator ==(const Size& size) const
-    { return cx == size.cx && cy == size.cy; }
+    constexpr bool operator==(const Size&) const = default;
 };
 
 struct Point final
 {
-    Integer x;
-    Integer y;
+    Integer x = 0;
+    Integer y = 0;
 
-    Point() : x(0), y(0)
+    constexpr Point() = default;
+
+    constexpr Point(Integer x, Integer y) : x(x), y(y)
     {}
 
-    Point(Integer x, Integer y) : x(x), y(y)
-    {}
-
-    bool operator ==(const Point& point) const
+    // Not "= default": this is on the hot path (GetAliveNeighborCount), and the defaulted one was measurably slower with g++.
+    constexpr bool operator==(const Point& point) const
     { return x == point.x && y == point.y; }
 
-    Point operator +(const Size& size) const
+    constexpr Point operator+(const Size& size) const
     { return Point(x + size.cx, y + size.cy); }
 
-    Size operator -(const Point& point) const
+    constexpr Size operator-(const Point& point) const
     { return Size(x - point.x, y - point.y); }
 };
 
@@ -89,26 +91,30 @@ struct Rect final
     Point leftTop;
     Size  size;
 
-    Point RightBottom() const
+    constexpr Point RightBottom() const
     { return leftTop + size; }
 
-#if defined(AREA) && defined(MT)
-    Rect()
+    constexpr Rect() = default;
+
+    constexpr Rect(const Point& leftTop, const Size& size) : leftTop(leftTop), size(size)
     {}
 
-    static Rect Union(const Rect* rects, unsigned int count)
-    {
-        assert(count > 0);
+    constexpr Rect(const Point& leftTop, const Point& rightBottom) : leftTop(leftTop), size(rightBottom - leftTop)
+    {}
 
-        const auto rect0RightBottom = rects[0].RightBottom();
-        auto left                   = rects[0].leftTop.x;
-        auto top                    = rects[0].leftTop.y;
+#if defined(AREA) && defined(MT)
+    static Rect Union(std::span<const Rect> rects)
+    {
+        assert(!rects.empty());
+
+        const auto rect0RightBottom = rects.front().RightBottom();
+        auto left                   = rects.front().leftTop.x;
+        auto top                    = rects.front().leftTop.y;
         auto right                  = rect0RightBottom.x;
         auto bottom                 = rect0RightBottom.y;
 
-        for (auto index = 1U; index < count; index++) {
-            const auto& rect            = rects[index];
-            const auto  rectRightBottom = rect.RightBottom();
+        for (const auto& rect : rects.subspan(1)) {
+            const auto rectRightBottom = rect.RightBottom();
             left   = std::min(left  , rect.leftTop   .x);
             top    = std::min(top   , rect.leftTop   .y);
             right  = std::max(right , rectRightBottom.x);
@@ -119,28 +125,22 @@ struct Rect final
     }
 #endif // AREA && MT
 
-    Rect(const Point& leftTop, const Size& size) : leftTop(leftTop), size(size)
-    {}
-
-    Rect(const Point& leftTop, const Point& rightBottom) : leftTop(leftTop), size(rightBottom - leftTop)
-    {}
-
-    bool IsIn(const Point& point) const
+    constexpr bool IsIn(const Point& point) const
     {
         return IsIn(point.x, leftTop.x, size.cx) &&
                IsIn(point.y, leftTop.y, size.cy);
     }
 
-    bool IsEmpty() const
+    constexpr bool IsEmpty() const
     { return size.cx <= 0 || size.cy <= 0; }
 
 private:
-    template <typename T>
-    bool IsIn(T value, T minimum, T size) const
+    static constexpr bool IsIn(Integer value, Integer minimum, Integer size)
     { return minimum <= value && value < minimum + size; }
 };
 
 #if !defined(FAST)
+// std::function is used on purpose: FAST replaces these generic loops with direct loops.
 class Utility final
 {
 public:
@@ -170,61 +170,34 @@ public:
 class ThreadUtility final
 {
 public:
-#if defined(AREA)
-    static void ForEach(Integer minimum, Integer maximum, std::function<void(Integer, Integer, unsigned int)> action)
+    /// <summary>Splits [minimum, maximum) into ranges, and calls action(begin, end, threadIndex) for each range in its own thread.</summary>
+    template <std::invocable<Integer, Integer, unsigned int> TAction>
+    static void ForEach(Integer minimum, Integer maximum, const TAction& action)
     {
-        const auto               hardwareConcurrency = GetHardwareConcurrency();
-        const Integer            size = maximum - minimum;
-        std::vector<std::thread> threads;
+        const auto                hardwareConcurrency = GetHardwareConcurrency();
+        const Integer             size                = maximum - minimum;
+        std::vector<std::jthread> threads;
 
         for (auto threadIndex = 0U; threadIndex < hardwareConcurrency; threadIndex++) {
-            const auto index = threadIndex;
-            const auto begin = minimum + size * index / hardwareConcurrency;
-            const auto end   = minimum + (index == hardwareConcurrency - 1 ? size
-                                                                           : size * (index + 1) / hardwareConcurrency);
-            threads.emplace_back([=]() { action(begin, end, threadIndex); });
+            const auto begin = minimum + Integer(size * threadIndex / hardwareConcurrency);
+            const auto end   = minimum + (threadIndex == hardwareConcurrency - 1 ? size
+                                                                                 : Integer(size * (threadIndex + 1) / hardwareConcurrency));
+            threads.emplace_back([=, &action] { action(begin, end, threadIndex); });
         }
-
-        for (auto& thread : threads)
-            thread.join();
-    }
-#else // AREA
-    static void ForEach(Integer minimum, Integer maximum, std::function<void(Integer, Integer)> action)
-    {
-        const auto               hardwareConcurrency = GetHardwareConcurrency();
-        const Integer            size = maximum - minimum;
-        std::vector<std::thread> threads;
-
-        for (auto threadIndex = 0U; threadIndex < hardwareConcurrency; threadIndex++) {
-            const auto index = threadIndex;
-            const auto begin = minimum + size * index / hardwareConcurrency;
-            const auto end   = minimum + (index == hardwareConcurrency - 1 ? size
-                                                                           : size * (index + 1) / hardwareConcurrency);
-            threads.emplace_back([=]() { action(begin, end); });
-        }
-
-        for (auto& thread : threads)
-            thread.join();
+        // std::jthread joins on destruction.
     }
 
-private:
-#endif // AREA
     static unsigned int GetHardwareConcurrency()
-    {
-        auto hardwareConcurrency = std::thread::hardware_concurrency();
-        if (hardwareConcurrency == 0U)
-            hardwareConcurrency = 1U;
-        return hardwareConcurrency;
-    }
+    { return std::max(std::thread::hardware_concurrency(), 1U); }
 };
 #endif // MT
 
 class Pattern final
 {
     static constexpr char alive = '*';
-    const tstring         name;
-    const std::string     pattern;
-    const UnsignedInteger width;
+    tstring               name;
+    std::string           pattern;
+    UnsignedInteger       width;
 
 public:
     Size GetSize() const
@@ -241,7 +214,7 @@ public:
     const tstring& GetName() const
     { return name; }
 
-    Pattern(const tstring& name, const std::string& pattern, UnsignedInteger width) : name(name), pattern(pattern), width(width)
+    Pattern(tstring name, std::string pattern, UnsignedInteger width) : name(std::move(name)), pattern(std::move(pattern)), width(width)
     {}
 
     bool operator[](size_t index) const
@@ -261,37 +234,39 @@ public:
 
     PatternSet(const tstring& folderName = _T(".\\CellData"))
     {
-        std::vector<Pattern> patterns5;
-        Pattern5::ReadFromFolder(folderName, patterns5);
-        Helper::Connect<std::vector<Pattern>>(patterns, patterns5);
-
-        std::vector<Pattern> patternsRle;
-        RlePattern::ReadFromFolder(folderName, patternsRle);
-        Helper::Connect<std::vector<Pattern>>(patterns, patternsRle);
+        Append(Pattern5  ::ReadFromFolder(folderName));
+        Append(RlePattern::ReadFromFolder(folderName));
     }
 
 private:
+    void Append(std::vector<Pattern>&& newPatterns)
+    { std::ranges::move(newPatterns, std::back_inserter(patterns)); }
+
+    static std::vector<std::string> ReadTrimmedLines(const tstring& filePath)
+    {
+        auto lines = File::Read(filePath);
+        for (auto& line : lines)
+            line = String::Trim(line);
+        return lines;
+    }
+
     class Pattern5 final
     {
     public:
-        static void ReadFromFolder(tstring folderName, std::vector<Pattern>& patterns)
+        static std::vector<Pattern> ReadFromFolder(const tstring& folderName)
         {
-            patterns.clear();
-
+            std::vector<Pattern> patterns;
             for (const auto extension5 : { ".lif", ".life" }) {
-                std::vector<tstring> filePaths;
-                Shos::File::GetFilePaths(folderName, filePaths, extension5);
-
-                std::vector<Pattern> patternsOfExtension;
-                Helper::Map<std::vector<tstring>, std::vector<Pattern>, tstring, Pattern>(filePaths, patternsOfExtension, [&](tstring filePath) { return Read(filePath); });
-                Helper::Connect<std::vector<Pattern>>(patterns, patternsOfExtension);
+                for (const auto& filePath : File::GetFilePaths(folderName, extension5))
+                    patterns.push_back(Read(filePath));
             }
+            return patterns;
         }
 
         static std::string Adjust(std::string text, size_t width)
         {
-            const auto character = '.';
-            return String::Adjust(text, character, width);
+            constexpr auto character = '.';
+            return String::Adjust(std::move(text), character, width);
         }
 
     private:
@@ -302,22 +277,16 @@ private:
             std::vector<std::string> lines;
 
             Integer GetWidth() const
-            { return Integer(Helper::Maximum<std::vector<std::string>, std::string, UnsignedInteger>(lines, [](const std::string& text) { return UnsignedInteger(text.length()); })); }
+            { return Integer(std::ranges::max(lines, {}, [](const std::string& line) { return line.length(); }).length()); }
 
             Integer GetHeight() const
             { return Integer(lines.size()); }
         };
 
-        static Pattern Read(tstring filePath)
+        static Pattern Read(const tstring& filePath)
         {
-            std::vector<std::string> lines;
-            Shos::File::Read(filePath, lines);
-
-            std::vector<std::string> trimedLines;
-            Helper::Map<std::vector<std::string>, std::vector<std::string>, std::string, std::string>(lines, trimedLines, [](std::string text) { return String::Trim(text); });
-
             std::vector<Block> blocks;
-            for (const auto& line : trimedLines) {
+            for (const auto& line : ReadTrimmedLines(filePath)) {
                 if (line.starts_with("#P")) {
                     blocks.push_back(Block{ ReadPosition(line), {} });
                 } else if (!line.starts_with('#') && !line.starts_with('!')) { // '!': comment of the Plaintext format
@@ -332,13 +301,13 @@ private:
                 while (!block.lines.empty() && block.lines.back().empty())
                     block.lines.pop_back();
             }
-            blocks.erase(std::remove_if(blocks.begin(), blocks.end(), [](const Block& block) { return block.lines.empty(); }), blocks.end());
+            std::erase_if(blocks, [](const Block& block) { return block.lines.empty(); });
 
-            if (blocks.size() == 0)
+            if (blocks.empty())
                 return Pattern(_T(""), "", 0U);
 
-            auto left   = blocks[0].position.x;
-            auto top    = blocks[0].position.y;
+            auto left   = blocks.front().position.x;
+            auto top    = blocks.front().position.y;
             auto right  = left;
             auto bottom = top;
             for (const auto& block : blocks) {
@@ -360,7 +329,7 @@ private:
                 }
             }
 
-            return Pattern(Shos::File::GetStem(filePath), pattern, width);
+            return Pattern(File::GetStem(filePath), std::move(pattern), width);
         }
 
         /// <param name="line">"#P x y"</param>
@@ -377,62 +346,52 @@ private:
     class RlePattern final
     {
     public:
-        static void ReadFromFolder(tstring folderName, std::vector<Pattern>& patterns)
+        static std::vector<Pattern> ReadFromFolder(const tstring& folderName)
         {
-            patterns.clear();
-
-            const auto           extensionRle = ".rle";
-            std::vector<tstring> filePaths;
-            Shos::File::GetFilePaths(folderName, filePaths, extensionRle);
-
-            Helper::Map<std::vector<tstring>, std::vector<Pattern>, tstring, Pattern>(filePaths, patterns, [&](tstring filePath) { return Read(filePath); });
+            std::vector<Pattern> patterns;
+            for (const auto& filePath : File::GetFilePaths(folderName, ".rle"))
+                patterns.push_back(Read(filePath));
+            return patterns;
         }
 
     private:
-        static Pattern Read(tstring filePath)
+        static Pattern Read(const tstring& filePath)
         {
-            std::vector<std::string> lines;
-            Shos::File::Read(filePath, lines);
+            auto lines = ReadTrimmedLines(filePath);
+            std::erase_if(lines, [](const std::string& text) { return text.empty() || text.starts_with('#'); });
 
-            std::vector<std::string> trimedLines;
-            Helper::Map<std::vector<std::string>, std::vector<std::string>, std::string, std::string>(lines, trimedLines, [](std::string text) { return String::Trim(text); });
-
-            std::vector<std::string> filteredLines;
-            Helper::Filter<std::vector<std::string>, std::string>(trimedLines, filteredLines, [](const std::string& text) { return !text.empty() && !text.starts_with('#'); });
-
-            if (filteredLines.size() == 0)
+            if (lines.empty())
                 return Pattern(_T(""), "", 0U);
 
-            const auto rule = filteredLines[0];
-            auto [width, height] = GetRleSize(rule);
+            const auto [width, height] = GetRleSize(lines.front());
 
-            std::vector<std::string> patternLines{ filteredLines.begin() + 1, filteredLines.end() };
+            std::string rlePattern;
+            for (const auto& line : lines | std::views::drop(1))
+                rlePattern += line;
 
-            std::string pattern = Helper::Connect(patternLines);
-            pattern = RleToPattern(pattern, width, height);
-
-            return Pattern(Shos::File::GetStem(filePath), pattern, width);
+            return Pattern(File::GetStem(filePath), RleToPattern(rlePattern, width, height), width);
         }
 
-        static std::string RleToPattern(std::string rlePattern, UnsignedInteger width, UnsignedInteger height)
+        static std::string RleToPattern(std::string_view rlePattern, UnsignedInteger width, UnsignedInteger height)
         {
             std::string pattern;
             std::string partPattern;
             size_t      count = 0U;
             for (size_t index = 0U; index < rlePattern.length(); index++) {
-                const auto  character = std::tolower(static_cast<unsigned char>(rlePattern[index]));
+                const auto character = std::tolower(static_cast<unsigned char>(rlePattern[index]));
                 if (std::isdigit(character)) {
                     count = GetRleCount(rlePattern, index);
                 } else {
+                    const auto repeat = count == 0U ? 1U : count;
                     switch (character) {
                     case 'b':
-                        partPattern.append(count == 0U ? 1U : count, '.');
+                        partPattern.append(repeat, '.');
                         break;
                     case 'o':
-                        partPattern.append(count == 0U ? 1U : count, '*');
+                        partPattern.append(repeat, '*');
                         break;
                     case '$': // "n$" ends the line and adds (n - 1) empty lines.
-                        for (size_t line = 0U; line < (count == 0U ? 1U : count); line++) {
+                        for (size_t line = 0U; line < repeat; line++) {
                             AppendPartPattern(partPattern, width, pattern);
                             partPattern.clear();
                         }
@@ -459,28 +418,23 @@ private:
                 pattern.append(length - pattern.length(), '.');
         }
 
-        static void AppendPartPattern(std::string& partPattern, UnsignedInteger width, std::string& pattern)
+        static void AppendPartPattern(const std::string& partPattern, UnsignedInteger width, std::string& pattern)
         {
             if (partPattern.length() < width)
                 pattern.append(Pattern5::Adjust(partPattern, width));
-            else if (partPattern.length() > width)
-                pattern.append(partPattern.substr(0, width));
             else
-                pattern.append(partPattern);
+                pattern.append(partPattern, 0, width);
         }
 
-        static size_t GetRleCount(std::string rlePattern, size_t& index)
+        static size_t GetRleCount(std::string_view rlePattern, size_t& index)
         {
-            size_t count = 0U;
+            size_t count  = 0U;
             size_t number = 0U;
             for (; index + number < rlePattern.length(); number++) {
                 const auto character = rlePattern[index + number];
-                if (std::isdigit(static_cast<unsigned char>(character))) {
-                    count *= 10;
-                    count += character - '0';
-                } else {
+                if (!std::isdigit(static_cast<unsigned char>(character)))
                     break;
-                }
+                count = count * 10 + size_t(character - '0');
             }
             if (number > 0U)
                 index += number - 1;
@@ -489,21 +443,18 @@ private:
 
         static std::tuple<UnsignedInteger, UnsignedInteger> GetRleSize(std::string rule)
         {
-            rule.erase(std::remove_if(rule.begin(), rule.end(), [](unsigned char character) { return std::isspace(character); }), rule.end());
+            std::erase_if(rule, [](unsigned char character) { return std::isspace(character); });
 
-            const auto tokens = String::Split(rule, ',');
-            std::vector<std::string> trimedTokens;
-
-            UnsignedInteger width = 0U;
+            UnsignedInteger width  = 0U;
             UnsignedInteger height = 0U;
 
             try {
-                for (const auto& token : tokens) {
+                for (const auto& token : String::Split(rule, ',')) {
                     const auto lowerToken = String::ToLower(token);
                     if (lowerToken.starts_with("x="))
-                        width = std::stoi(token.substr(2));
+                        width = UnsignedInteger(std::stoi(token.substr(2)));
                     else if (lowerToken.starts_with("y="))
-                        height = std::stoi(token.substr(2));
+                        height = UnsignedInteger(std::stoi(token.substr(2)));
                 }
             } catch (const std::exception&) {
             }
@@ -514,12 +465,12 @@ private:
 
 class BitCellSet
 {
-    const Size      size;
-    UnsignedInteger unitNumberX;
-    UnitInteger*    cells;
+    const Size                     size;
+    const UnsignedInteger          unitNumberX;
+    std::unique_ptr<UnitInteger[]> cells;
 
 #if defined(AREA)
-    Rect            area;
+    Rect                           area;
 #endif // AREA
 
 public:
@@ -544,47 +495,44 @@ public:
     { return GetRect(); }
 #endif // AREA
 
-#if defined(AREA)
-#endif // AREA
-
     /// <summary>Bits in the layout of a monochrome bitmap (see GetRowByteNumber).</summary>
     UnitInteger* GetBits() const
-    { return cells; }
+    { return cells.get(); }
 
     /// <summary>Bytes per row of the bits, which is WORD-aligned like a monochrome bitmap.</summary>
-    static UnsignedInteger GetRowByteNumber(Integer width)
+    static constexpr UnsignedInteger GetRowByteNumber(Integer width)
     { return UnsignedInteger((width + 15) / 16 * 2); }
 
-    BitCellSet(const Size& size) : size(size)
+    BitCellSet(const Size& size)
+        : size(size), unitNumberX(GetRowByteNumber(size.cx)), cells(std::make_unique<UnitInteger[]>(GetUnitNumber()))
 #if defined(AREA)
-        , area(GetDefaultArea(Rect(Point(), size)))
+        , area(GetDefaultArea(GetRect()))
 #endif // AREA
-    { Initialize(); }
+    { static_assert(sizeof(UnitInteger) == sizeof(Byte)); }
 
-    virtual ~BitCellSet()
-    { delete[] cells; }
+    virtual ~BitCellSet() = default;
 
     BitCellSet(const BitCellSet&)            = delete;
     BitCellSet& operator=(const BitCellSet&) = delete;
 
     bool Get(const Point& point) const
     {
-        std::tuple<UnsignedInteger, Byte> bitIndex;
-        if (!ToIndex(point, bitIndex))
+        UnsignedInteger index;
+        Byte            bit;
+        if (!ToIndex(point, index, bit))
             return false;
 
-        const auto [index, bit] = bitIndex;
         return (cells[index] & (1 << bit)) != 0;
     }
 
     void Set(const Point& point, bool value)
     {
 #if defined(AREA)
-        std::tuple<UnsignedInteger, Byte> bitIndex;
-        if (!ToIndex(point, bitIndex))
+        UnsignedInteger index;
+        Byte            bit;
+        if (!ToIndex(point, index, bit))
             return;
 
-        const auto [index, bit] = bitIndex;
         if (value) {
             cells[index] |= 1 << bit;
             area = Union(area, GetRect(), point);
@@ -604,28 +552,22 @@ public:
 
     void SetOnly(const Point& point, bool value)
     {
-        std::tuple<UnsignedInteger, Byte> bitIndex;
-        if (!ToIndex(point, bitIndex))
+        UnsignedInteger index;
+        Byte            bit;
+        if (!ToIndex(point, index, bit))
             return;
 
-        const auto [index, bit] = bitIndex;
         value ? (cells[index] |= 1 << bit)
               : (cells[index] &= ~(1 << bit));
     }
 
     void Clear()
     {
-        ::memset(cells, 0, GetUnitNumber() * (sizeof(UnitInteger) / sizeof(Byte)));
+        std::fill_n(cells.get(), GetUnitNumber(), UnitInteger(0));
 #if defined(AREA)
         area = GetDefaultArea(GetRect());
 #endif // AREA
     }
-
-    //void CopyTo(BitCellSet& bitCellSet) const
-    //{
-    //    assert(size == bitCellSet.size);
-    //    ::memcpy(bitCellSet.cells, cells, GetUnitNumber() * (sizeof(UnitInteger) / sizeof(Byte)));
-    //}
 
 #if !defined(FAST)
     void ForEach(std::function<void(const Point&)> action, bool areaOnly)
@@ -677,33 +619,20 @@ private:
 #endif // _DEBUG
     }
 
-    void Initialize()
-    {
-        InitializeUnitNumberX();
-        const auto unitNumber = GetUnitNumber();
-        cells                 = new UnitInteger[unitNumber];
-        Clear();
-    }
-
-    void InitializeUnitNumberX()
-    {
-        static_assert(sizeof(UnitInteger) == sizeof(Byte));
-        unitNumberX = GetRowByteNumber(size.cx);
-    }
-
     UnsignedInteger GetUnitNumber() const
-    { return unitNumberX * size.cy; }
+    { return unitNumberX * UnsignedInteger(size.cy); }
 
-    bool ToIndex(const Point& point, std::tuple<UnsignedInteger, Byte>& bitIndex) const
+    /// <returns>false if the point is outside.</returns>
+    /// <remarks>Out parameters, not std::optional: this is on the hot path, and std::optional made it measurably slower.</remarks>
+    bool ToIndex(const Point& point, UnsignedInteger& index, Byte& bit) const
     {
         if (!GetRect().IsIn(point))
             return false;
 
         // The leftmost pixel is the most significant bit in a monochrome bitmap.
         constexpr auto bitNumber = sizeof(UnitInteger) * 8;
-        const auto index         = UnsignedInteger(unitNumberX * point.y + point.x / bitNumber);
-        const auto bit           = Byte(bitNumber - 1 - point.x % bitNumber);
-        bitIndex                 = { index, bit };
+        index                    = UnsignedInteger(unitNumberX * point.y + point.x / bitNumber);
+        bit                      = Byte(bitNumber - 1 - point.x % bitNumber);
         return true;
     }
 };
@@ -711,12 +640,12 @@ private:
 #if !defined(USEBITS)
 class Board final
 {
-    const Size      size;
-    bool**          cells;
-    BitCellSet*     bitCellSet;
+    const Size                          size;
+    std::vector<std::unique_ptr<bool[]>> cells; // cells[y][x]
+    BitCellSet                          bitCellSet;
 
 #if defined(AREA)
-    Rect            area;
+    Rect                                area;
 #endif // AREA
 
 public:
@@ -735,34 +664,29 @@ public:
 
     UnitInteger* GetBits()
     {
-        bitCellSet->Clear();
+        bitCellSet.Clear();
 
 #if defined(FAST)
         for (auto point = Point{ 0, 0 }; point.y < size.cy; point.y++) {
             for (point.x = 0; point.x < size.cx; point.x++) {
                 if (Get(point))
-                    bitCellSet->SetOnly(point, true);
+                    bitCellSet.SetOnly(point, true);
             }
         }
 #else // FAST
-        Utility::ForEach(Rect{ Point {0, 0}, size }, [&](const Point& point) { bitCellSet->SetOnly(point, Get(point)); });
+        Utility::ForEach(Rect{ Point {0, 0}, size }, [&](const Point& point) { bitCellSet.SetOnly(point, Get(point)); });
 #endif // FAST
 
-        return bitCellSet->GetBits();
+        return bitCellSet.GetBits();
     }
 
-    Board(const Size& size) : size(size), bitCellSet(new BitCellSet(size))
+    Board(const Size& size) : size(size), bitCellSet(size)
 #if defined(AREA)
-        , area(BitCellSet::GetDefaultArea(Rect(Point(), size)))
+        , area(BitCellSet::GetDefaultArea(GetRect()))
 #endif // AREA
-    { Initialize(); }
-
-    ~Board()
     {
-        delete bitCellSet;
         for (auto y = 0; y < size.cy; y++)
-            delete[] cells[y];
-        delete[] cells;
+            cells.push_back(std::make_unique<bool[]>(size_t(size.cx)));
     }
 
     Board(const Board&)            = delete;
@@ -831,7 +755,7 @@ public:
     }
 
     bool Get(const Point& point) const
-    { return GetRect().IsIn(point) ? cells[point.y][point.x] : false; }
+    { return GetRect().IsIn(point) ? cells[size_t(point.y)][point.x] : false; }
 
     void Set(const Point& point, bool value)
     {
@@ -843,22 +767,13 @@ public:
     }
 
     void SetOnly(const Point& point, bool value)
-    { cells[point.y][point.x] = value; }
+    { cells[size_t(point.y)][point.x] = value; }
 
 private:
-    void Initialize()
-    {
-        cells = new bool*[size.cy];
-        for (auto y = 0; y < size.cy; y++)
-            cells[y] = new bool[size.cx];
-
-        Clear();
-    }
-
     void Clear()
     {
-        for (auto y = 0; y < size.cy; y++)
-            ::memset(cells[y], 0, sizeof(bool) * size.cx);
+        for (auto& row : cells)
+            std::fill_n(row.get(), size.cx, false);
 
 #if defined(AREA)
         area = BitCellSet::GetDefaultArea(GetRect());
@@ -937,8 +852,8 @@ public:
     }
 
     bool Get(const Point& point) const
-    { return  BitCellSet::Get(point); }
-    
+    { return BitCellSet::Get(point); }
+
     void Set(const Point& point, bool value)
     { BitCellSet::Set(point, value); }
 };
@@ -946,15 +861,14 @@ public:
 
 class Game final
 {
-    Random             random    ;
-    Board*             mainBoard ;
-    Board*             subBoard  ;
-    unsigned long long generation;
-    PatternSet         patternSet;
-    int                patternIndex;
+    Random                 random;
+    std::unique_ptr<Board> mainBoard;
+    std::unique_ptr<Board> subBoard;
+    unsigned long long     generation = 0ULL;
+    PatternSet             patternSet;
+    std::optional<size_t>  patternIndex;
 #if defined(AREA) && defined(MT)
-    Rect*              areas    ;
-    const unsigned int hardwareConcurrency;
+    std::vector<Rect>      areas; // One for each thread
 #endif // AREA && MT
 
 public:
@@ -968,22 +882,13 @@ public:
     { return generation; }
 
     tstring GetPatternName() const
-    { return 0 <= patternIndex && size_t(patternIndex) < patternSet.GetSize() ? patternSet[size_t(patternIndex)].GetName() : _T(""); }
+    { return patternIndex ? patternSet[*patternIndex].GetName() : tstring(); }
 
-    Game(const Size& size) : mainBoard(new Board(size)), subBoard(new Board(size)), generation(0UL), patternIndex(-1)
+    Game(const Size& size) : mainBoard(std::make_unique<Board>(size)), subBoard(std::make_unique<Board>(size))
 #if defined(AREA) && defined(MT)
-        , areas(nullptr), hardwareConcurrency(ThreadUtility::GetHardwareConcurrency())
+        , areas(ThreadUtility::GetHardwareConcurrency())
 #endif // AREA && MT
-    { Initialize(true); }
-
-    ~Game()
-    {
-#if defined(AREA) && defined(MT)
-        delete[] areas;
-#endif // AREA && MT
-        delete subBoard;
-        delete mainBoard;
-    }
+    { Randomize(); }
 
     Game(const Game&)            = delete;
     Game& operator=(const Game&) = delete;
@@ -997,33 +902,25 @@ public:
 #endif // AREA
 
 #if defined(MT)
-        //const auto size = mainBoard->GetSize();
-
-        //ThreadUtility::ForEach(0, size.cy, [=](Integer minimum, Integer maximum) {
-        //    NextPart(Point(0, minimum), Point(size.cx, maximum));
-        //});
-
         const auto area            = mainBoard->GetArea();
         const auto areaRightBottom = area.RightBottom();
 
 #if defined(AREA)
-        ResetAreas();
+        std::ranges::fill(areas, BitCellSet::GetEmptyArea(mainBoard->GetSize()));
 
         ThreadUtility::ForEach(area.leftTop.y, areaRightBottom.y, [=, this](Integer minimum, Integer maximum, unsigned int index) {
             NextPart(Point(area.leftTop.x, minimum), Point(areaRightBottom.x, maximum), areas[index]);
         });
 
-        const auto newArea = Rect::Union(areas, hardwareConcurrency);
-        subBoard->SetArea(newArea);
+        subBoard->SetArea(Rect::Union(areas));
 
 #else // AREA
-        ThreadUtility::ForEach(area.leftTop.y, areaRightBottom.y, [=, this](Integer minimum, Integer maximum) {
+        ThreadUtility::ForEach(area.leftTop.y, areaRightBottom.y, [=, this](Integer minimum, Integer maximum, unsigned int) {
             NextPart(Point(area.leftTop.x, minimum), Point(areaRightBottom.x, maximum));
         });
 #endif // AREA
 
 #elif defined(FAST)
-        //NextPart(Point(), Point() + mainBoard->GetSize());
         const auto area = mainBoard->GetArea();
         NextPart(area.leftTop, area.RightBottom());
 #else // FAST
@@ -1049,37 +946,26 @@ public:
 
     void Reset(bool randomize)
     {
-        Initialize(randomize);
-        generation = 0UL;
-        if (randomize)
-            patternIndex = -1;
+        if (randomize) {
+            Randomize();
+            patternIndex.reset();
+        }
+        generation = 0ULL;
     }
 
     bool SetPattern(int index)
     {
         if (index < 0 || patternSet.GetSize() <= size_t(index)) {
-            patternIndex = -1;
+            patternIndex.reset();
             return false;
         }
-        mainBoard->Set(patternSet[size_t(index)]);
-        subBoard ->Set(patternSet[size_t(index)]);
-        patternIndex = index;
+        patternIndex = size_t(index);
+        mainBoard->Set(patternSet[*patternIndex]);
+        subBoard ->Set(patternSet[*patternIndex]);
         return true;
     }
 
 private:
-    void Initialize(bool randomize)
-    {
-        if (randomize)
-            Randomize();
-
-#if defined(AREA) && defined(MT)
-        delete[] areas;
-        areas = new Rect[hardwareConcurrency];
-        ResetAreas();
-#endif // AREA && MT
-    }
-
     void Randomize()
     {
 #if defined(FAST)
@@ -1095,14 +981,6 @@ private:
         });
 #endif // FAST
     }
-
-#if defined(AREA) && defined(MT)
-    void ResetAreas()
-    {
-        for (auto index = 0U; index < hardwareConcurrency; index++)
-            areas[index] = BitCellSet::GetEmptyArea(mainBoard->GetSize());
-    }
-#endif // AREA && MT
 
 #if defined(AREA)
     /// <summary>Kills the cells in the area of the board that are outside of the given area.</summary>
@@ -1175,7 +1053,6 @@ private:
         }
     }
 #endif // _DEBUG
-
 };
 
 } // namespace Shos::LifeGame

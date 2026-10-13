@@ -20,15 +20,16 @@ public:
 private:
     static HBITMAP CreateBitmap(Board& board)
     {
-        BITMAP bitmap;
-        ::ZeroMemory(&bitmap, sizeof(BITMAP));
-        bitmap.bmWidth      = board.GetSize().cx;
-        bitmap.bmHeight     = board.GetSize().cy;
-        bitmap.bmPlanes     = 1;
-        bitmap.bmWidthBytes = LONG(BitCellSet::GetRowByteNumber(board.GetSize().cx));
-        bitmap.bmBitsPixel  = 1;
-        bitmap.bmBits       = board.GetBits();
-
+        const auto   size   = board.GetSize();
+        const BITMAP bitmap = {
+            .bmType       = 0,
+            .bmWidth      = size.cx,
+            .bmHeight     = size.cy,
+            .bmWidthBytes = LONG(BitCellSet::GetRowByteNumber(size.cx)),
+            .bmPlanes     = 1,
+            .bmBitsPixel  = 1,
+            .bmBits       = board.GetBits()
+        };
         return ::CreateBitmapIndirect(&bitmap);
     }
 

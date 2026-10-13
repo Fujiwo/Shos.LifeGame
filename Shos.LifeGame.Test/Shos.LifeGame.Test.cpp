@@ -2,7 +2,6 @@
 #include "../Shos.LifeGame/ShosStopwatch.h"
 #include <thread>
 #include <vector>
-using namespace std;
 
 // Result:
 //       (23.363s.)
@@ -18,9 +17,9 @@ namespace Shos::LifeGame::Test {
         void Run()
         {
             const Integer size = 2048;
-            const size_t times =  100;
+            const auto    times = 100;
 
-            Shos::LifeGame::Game game({ size, size });
+            Game game(Size(size, size));
 
             Shos::stopwatch_viewer stopwatch_viewer;
             for (auto count = 0; count < times; count++)

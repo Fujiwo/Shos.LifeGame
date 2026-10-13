@@ -7,15 +7,12 @@ namespace Shos {
 
 class stopwatch
 {
-    bool                                  has_started;
+    bool                                  has_started = false;
     std::chrono::steady_clock::time_point start_time;
 
 public:
     bool is_running() const
     { return has_started; }
-
-    stopwatch() : has_started(false)
-    {}
 
     void start()
     {

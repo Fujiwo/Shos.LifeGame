@@ -13,12 +13,13 @@
 #include <algorithm>
 #include <vector>
 #endif // USERMESSAGE
+#include "ShosHelper.h"
 
 namespace Shos::Win32 {
 
 class Window
 {
-    HWND handle;
+    HWND handle = nullptr;
 
 #if defined(USERMESSAGE)
     std::vector<UINT> userMessages;
@@ -28,11 +29,12 @@ public:
     HWND GetHandle() const
     { return handle; }
 
-    Window() : handle(nullptr)
-    {}
+    Window() = default;
 
-    virtual ~Window()
-    {}
+    virtual ~Window() = default;
+
+    Window(const Window&)            = delete;
+    Window& operator=(const Window&) = delete;
 
     bool Create(HINSTANCE instanceHandle, LPCTSTR windowClassName, LPCTSTR title, int showCommand)
     {
@@ -61,12 +63,12 @@ public:
     
     RECT GetClientRect() const
     {
-        RECT clientRect;
+        RECT clientRect{};
         ::GetClientRect(handle, &clientRect);
         return clientRect;
     }
 
-    void SetText(tstring text) const
+    void SetText(const tstring& text) const
     { ::SetWindowText(handle, text.c_str()); }
 
 #if defined(USERMESSAGE)
@@ -89,39 +91,25 @@ protected:
     virtual void OnCreate()
     {}
 
-    virtual void OnSize(SIZE size)
-    {
-        UNREFERENCED_PARAMETER(size);
-    }
+    virtual void OnSize([[maybe_unused]] SIZE size)
+    {}
 
-    virtual void OnPaint(HDC deviceContextHandle)
-    {
-        UNREFERENCED_PARAMETER(deviceContextHandle);
-    }
+    virtual void OnPaint([[maybe_unused]] HDC deviceContextHandle)
+    {}
 
 #if defined(TIMER)
-    virtual void OnTimer(int timerId)
-    {
-        UNREFERENCED_PARAMETER(timerId);
-    }
+    virtual void OnTimer([[maybe_unused]] int timerId)
+    {}
 #endif // TIMER
 
-    virtual void OnChar(TCHAR character)
-    {
-        UNREFERENCED_PARAMETER(character);
-    }
+    virtual void OnChar([[maybe_unused]] TCHAR character)
+    {}
 
-    virtual void OnRightButtonUp(const POINT& point)
-    {
-        UNREFERENCED_PARAMETER(point);
-    }
+    virtual void OnRightButtonUp([[maybe_unused]] const POINT& point)
+    {}
 
-    virtual void OnUserMessage(UINT message, WPARAM wParam, LPARAM lParam)
-    {
-        UNREFERENCED_PARAMETER(message);
-        UNREFERENCED_PARAMETER(wParam );
-        UNREFERENCED_PARAMETER(lParam );
-    }
+    virtual void OnUserMessage([[maybe_unused]] UINT message, [[maybe_unused]] WPARAM wParam, [[maybe_unused]] LPARAM lParam)
+    {}
 
 private:
     static void SetSelf(HWND windowHandle, Window* self)
@@ -133,23 +121,23 @@ private:
     static LRESULT CALLBACK windowProcedure(HWND windowHandle, UINT message, WPARAM wParam, LPARAM lParam)
     {
         switch (message) {
-                case WM_CREATE: {
-                    auto createStruct = reinterpret_cast<CREATESTRUCT*>(lParam);
-                    auto self         = reinterpret_cast<Window*>(createStruct->lpCreateParams);
-                    self->handle      = windowHandle;
+            case WM_CREATE: {
+                    const auto createStruct = reinterpret_cast<CREATESTRUCT*>(lParam);
+                    const auto self         = static_cast<Window*>(createStruct->lpCreateParams);
+                    self->handle            = windowHandle;
                     SetSelf(windowHandle, self);
                     self->OnCreate();
                 }
                 break;
             case WM_PAINT: {
-                    PAINTSTRUCT ps;
-                    auto deviceContextHandle = ::BeginPaint(windowHandle, &ps);
+                    PAINTSTRUCT ps{};
+                    const auto deviceContextHandle = ::BeginPaint(windowHandle, &ps);
                     GetSelf(windowHandle)->OnPaint(deviceContextHandle);
                     ::EndPaint(windowHandle, &ps);
                 }
                 break;
             case WM_SIZE: {
-                    const auto size = SIZE { LOWORD(lParam), HIWORD(lParam) };
+                    const auto size = SIZE{ LOWORD(lParam), HIWORD(lParam) };
                     GetSelf(windowHandle)->OnSize(size);
                 }
                 break;
@@ -164,7 +152,7 @@ private:
                 }
                 break;
             case WM_RBUTTONUP: {
-                    const POINT point = { GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
+                    const auto point = POINT{ GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam) };
                     GetSelf(windowHandle)->OnRightButtonUp(point);
                 }
                 break;
@@ -174,7 +162,7 @@ private:
             default:
 #if defined(USERMESSAGE)
                 {
-                    auto self = GetSelf(windowHandle);
+                    const auto self = GetSelf(windowHandle);
                     if (self == nullptr || !self->DispatchUserMessage(message, wParam, lParam))
                         return ::DefWindowProc(windowHandle, message, wParam, lParam);
                 }
@@ -188,18 +176,18 @@ private:
 
     static bool RegisterWindowClass(HINSTANCE instanceHandle, LPCTSTR windowClassName)
     {
-        WNDCLASSEX wcex;
-        if (::GetClassInfoEx(instanceHandle, windowClassName, &wcex))
+        if (WNDCLASSEX existing{ .cbSize = sizeof(WNDCLASSEX) }; ::GetClassInfoEx(instanceHandle, windowClassName, &existing))
             return true;
 
-        ::ZeroMemory(&wcex, sizeof(WNDCLASSEX));
-        wcex.cbSize        = sizeof(WNDCLASSEX);
-        wcex.style         = CS_HREDRAW | CS_VREDRAW;
-        wcex.lpfnWndProc   = windowProcedure;
-        wcex.hInstance     = instanceHandle;
-        wcex.hCursor       = ::LoadCursor(nullptr, IDC_ARROW);
-        wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-        wcex.lpszClassName = windowClassName;
+        const WNDCLASSEX wcex = {
+            .cbSize        = sizeof(WNDCLASSEX),
+            .style         = CS_HREDRAW | CS_VREDRAW,
+            .lpfnWndProc   = windowProcedure,
+            .hInstance     = instanceHandle,
+            .hCursor       = ::LoadCursor(nullptr, IDC_ARROW),
+            .hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1),
+            .lpszClassName = windowClassName
+        };
         return ::RegisterClassEx(&wcex) != 0;
     }
 
@@ -214,7 +202,7 @@ private:
     }
 
     bool ExistsUserMessage(UINT userMessage) const
-    { return std::find(userMessages.begin(), userMessages.end(), userMessage) != userMessages.end(); }
+    { return std::ranges::find(userMessages, userMessage) != userMessages.end(); }
 #endif // USERMESSAGE
 };
 
@@ -242,14 +230,15 @@ public:
 
 class Program
 {
-    Window* mainWindow;
+    Window* mainWindow = nullptr;
 
 public:
-    Program() : mainWindow(nullptr)
-    {}
+    Program() = default;
 
-    virtual ~Program()
-    {}
+    virtual ~Program() = default;
+
+    Program(const Program&)            = delete;
+    Program& operator=(const Program&) = delete;
 
     bool Run(HINSTANCE instanceHandle, int showCommand)
     {
@@ -266,10 +255,10 @@ protected:
 private:
     void MessageLoop()
     {
-        MSG message;
+        MSG message{};
 #if defined(IDLE)
-        for (; ;) {
-            if (::PeekMessage(&message, NULL, 0U, 0U, PM_REMOVE)) {
+        for (;;) {
+            if (::PeekMessage(&message, nullptr, 0U, 0U, PM_REMOVE)) {
                 if (message.message == WM_QUIT)
                     break;
                 ::TranslateMessage(&message);
