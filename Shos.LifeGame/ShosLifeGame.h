@@ -2,10 +2,23 @@
 
 // Define SHOS_LIFEGAME_CUSTOM_CONFIG to choose the following options outside this file (e.g. in tests).
 #if !defined(SHOS_LIFEGAME_CUSTOM_CONFIG)
+//#define USEBITS_ONLY
+#define USEBITS_FAST_MT_AREA
+#if defined(USEBITS_ONLY)
+#define USEBITS // Bits enabled           : a cell is stored in one bit (otherwise in one bool).
+#elif defined(USEBITS_FAST)
+#define USEBITS // Bits enabled           : a cell is stored in one bit (otherwise in one bool).
+#define FAST    // Fast loops enabled     : direct loops instead of generic loops with std::function.
+#elif defined(USEBITS_FAST_MT)
+#define USEBITS // Bits enabled           : a cell is stored in one bit (otherwise in one bool).
+#define FAST    // Fast loops enabled     : direct loops instead of generic loops with std::function.
+#define MT      // Multi-threading enabled: the rows are split among threads.
+#elif defined(USEBITS_FAST_MT_AREA)
 #define USEBITS // Bits enabled           : a cell is stored in one bit (otherwise in one bool).
 #define FAST    // Fast loops enabled     : direct loops instead of generic loops with std::function.
 #define MT      // Multi-threading enabled: the rows are split among threads.
 #define AREA    // Area enabled           : only the active area of the board is computed.
+#endif // USEBITS_FAST_MT_AREA
 #endif // SHOS_LIFEGAME_CUSTOM_CONFIG
 
 #include <string>
