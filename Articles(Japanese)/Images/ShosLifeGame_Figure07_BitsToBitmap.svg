@@ -8,8 +8,8 @@
 	<text x="235" y="305" text-anchor="middle" font-size="16" font-family="Consolas, monospace" fill="#555">1bit cell array</text>
 
 	<rect x="430" y="220" width="260" height="120" rx="10" fill="#fff7ef" stroke="#c98"/>
-	<text x="560" y="275" text-anchor="middle" font-size="22" font-family="Segoe UI, Arial, sans-serif">CreateBitmapIndirect</text>
-	<text x="560" y="305" text-anchor="middle" font-size="16" font-family="Consolas, monospace" fill="#555">HBITMAP</text>
+	<text x="560" y="275" text-anchor="middle" font-size="22" font-family="Segoe UI, Arial, sans-serif">SetBitmapBits</text>
+	<text x="560" y="305" text-anchor="middle" font-size="16" font-family="Consolas, monospace" fill="#555">HBITMAP (reused)</text>
 
 	<rect x="760" y="220" width="310" height="120" rx="10" fill="#f0fff0" stroke="#7a7"/>
 	<text x="915" y="275" text-anchor="middle" font-size="22" font-family="Segoe UI, Arial, sans-serif">BitBlt to Window DC</text>
