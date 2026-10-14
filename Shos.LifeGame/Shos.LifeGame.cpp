@@ -30,14 +30,18 @@ class MainWindow final : public Window
 #endif // TIMER
     static constexpr TCHAR title[]           = _T("Shos.LifeGame"         );
     static constexpr TCHAR windowClassName[] = _T("ShosLifeGameMainWindow");
+    // SetWindowText also repaints the title bar. The title is updated at this interval, not every generation.
+    static constexpr double titleIntervalSeconds = 0.1;
 
     Game                   game{ Size(1000, 1000) };
     POINT                  paintPosition{}; // Left-top of the board in the client area
     RECT                   renderingArea{}; // The board in the client area, invalidated every generation
+    BoardPainter           painter;
 #if defined(TIMER)
     std::unique_ptr<Timer> timer;
 #endif // TIMER
     stopwatch              watch;
+    double                 titleUpdatedTime = -titleIntervalSeconds; // The elapsed time of watch when the title was updated
 
 public:
     bool Create(HINSTANCE instanceHandle, int showCommand)
@@ -61,7 +65,7 @@ protected:
     }
 
     void OnPaint(HDC deviceContextHandle) override
-    { BoardPainter::Paint(deviceContextHandle, paintPosition, game.GetBoard()); }
+    { painter.Paint(deviceContextHandle, paintPosition, game.GetBoard()); }
 
 #if defined(TIMER)
     void OnTimer([[maybe_unused]] int timerId) override
@@ -106,7 +110,8 @@ private:
 
         game.Next();
         Invalidate(renderingArea);
-        SetTitle();
+        if (IsTitleToBeUpdated())
+            SetTitle();
     }
 
     /// <summary>Resets the generation and the time, so that the FPS is measured again.</summary>
@@ -114,6 +119,23 @@ private:
     {
         game.Reset(randomize);
         watch.start();
+        titleUpdatedTime = -titleIntervalSeconds;
+    }
+
+    /// <summary>Whether the interval has passed since the title was updated.</summary>
+    /// <remarks>The FPS in the title is computed from the generation and the time, so that it is the same whenever it is updated.</remarks>
+    bool IsTitleToBeUpdated()
+    {
+#if defined(LAP_TIMES)
+        // GetTitle keeps the lap at this generation.
+        if (game.GetGeneration() == LAP_TIMES)
+            return true;
+#endif // LAP_TIMES
+        const auto elapsed = watch.get_elapsed();
+        if (elapsed - titleUpdatedTime < titleIntervalSeconds)
+            return false;
+        titleUpdatedTime = elapsed;
+        return true;
     }
 
     void SetTitle() const
