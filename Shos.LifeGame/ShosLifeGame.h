@@ -1249,11 +1249,21 @@ private:
     void Randomize()
     {
 #if defined(FAST)
-        const auto size = mainBoard->GetSize();
+        // One random number gives the cells of its 32 bits, instead of one cell.
+        const auto    size     = mainBoard->GetSize();
+        std::uint32_t bits     = 0U;
+        auto          bitCount = 0;
         Point point;
         for (point.y = 0; point.y < size.cy; point.y++) {
-            for (point.x = 0; point.x < size.cx; point.x++)
-                mainBoard->Set(point, random.Next() % 2 == 0);
+            for (point.x = 0; point.x < size.cx; point.x++) {
+                if (bitCount == 0) {
+                    bits     = random.Next();
+                    bitCount = 32;
+                }
+                mainBoard->Set(point, (bits & 1U) != 0U);
+                bits >>= 1;
+                bitCount--;
+            }
         }
 #else // FAST
         mainBoard->ForEach([&](const Point& point) {
