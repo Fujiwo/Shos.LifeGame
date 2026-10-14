@@ -33,11 +33,11 @@
 | `#define` | 内容 | トレードオフ |
 |---|---|---|
 | `USEBITS` | 1 セルを 1 ビットで持つ (`BitCellSet`)。未定義の場合は、行ごとの `bool` 配列で持つ。 | ビット演算のコードは、`bool` 配列より読みにくい。 |
-| `FAST` | `std::function` を使う汎用ループ (`Utility::ForEach`) の代わりに、直接のループを使う。 | 似たコードが重複する。 |
-| `MT` | 行 (Y 方向) をスレッドに分け、スレッドごとに `NextPart` を実行する。 | 小さい盤面では効果が出にくい。 |
+| `FAST` | `std::function` を使う汎用ループ (`Utility::ForEach`) の代わりに、直接のループを使う。次の世代は行単位で計算し (`Game::NextRow`)、縦 3 セルの合計を隣のセルと共有する。 | 似たコードが重複する。 |
+| `MT` | 行 (Y 方向) を `ThreadPool` のスレッドに分け、スレッドごとに `NextPart` を実行する。スレッドはゲームの間ずっと残しておき、範囲が小さいときは少ないスレッドで計算する。 | 小さい盤面では効果が出にくい。 |
 | `AREA` | 活動範囲 (生きているセルの外接矩形に周囲 1 マスを加えた範囲) だけを計算する。 | 範囲の管理が複雑になる。セルが盤面全体に広がると効果が小さい。 |
 
-この 4 つとは別に、`BoardPainter` ([Shos.LifeGame/ShosLifeGameBoardPainter.h](Shos.LifeGame/ShosLifeGameBoardPainter.h)) が描画を最適化している。`USEBITS` が定義されている場合、`BoardPainter` は盤面のビット列をそのまま `CreateBitmapIndirect` に渡し、`BitBlt` で描画する。これができるのは、`BitCellSet` のビット配置を 1bpp のビットマップに合わせてあるからである。各バイトの最上位ビットを左端のピクセルにし、1 行のバイト数を WORD 境界にそろえている。
+この 4 つとは別に、`BoardPainter` ([Shos.LifeGame/ShosLifeGameBoardPainter.h](Shos.LifeGame/ShosLifeGameBoardPainter.h)) が描画を最適化している。`USEBITS` が定義されている場合、`BoardPainter` は盤面のビット列をそのまま `SetBitmapBits` でビットマップに書き込み、`BitBlt` で描画する。ビットマップは 1 回だけ作り、使い回す。これができるのは、`BitCellSet` のビット配置を 1bpp のビットマップに合わせてあるからである。各バイトの最上位ビットを左端のピクセルにし、1 行のバイト数を WORD 境界にそろえている。
 
 ## ベンチマーク
 
@@ -97,6 +97,13 @@
 ./Shos.LifeGame.Test/run_regression_tests.sh --asan   # AddressSanitizer と UndefinedBehaviorSanitizer 付き
 ```
 
+[Shos.LifeGame.Test/Shos.LifeGame.Benchmark.cpp](Shos.LifeGame.Test/Shos.LifeGame.Benchmark.cpp) は、ウィンドウを使わずに `Game::Next` の速さを測る。次のスクリプトは、これを `-O2` でビルドし、組み合わせを 1 つずつ実行する。各ケースは 3 回実行し、最も速い値を表示する。
+
+```
+./Shos.LifeGame.Test/run_benchmark.sh                        # すべての組み合わせ
+./Shos.LifeGame.Test/run_benchmark.sh --scale 0.1 FAST_MT_AREA USEBITS_FAST_MT_AREA   # 世代数を減らし、一部の組み合わせだけ
+```
+
 `Shos.LifeGame.Test/Shos.LifeGame.Test.cpp` (Visual Studio のテストプロジェクト) はベンチマークであり、結果の正しさは検証しない。
 
 ## フォルダー構成
@@ -110,7 +117,7 @@ Shos.LifeGame/                 アプリケーション
   ShosStopwatch.h              ストップウォッチ
   Shos.LifeGame.cpp            メインウィンドウとエントリーポイント
   CellData/                    パターンファイル (.lif/.rle)
-Shos.LifeGame.Test/            回帰テスト (g++) とベンチマーク (Visual Studio)
+Shos.LifeGame.Test/            回帰テストとベンチマーク (g++)、ベンチマーク (Visual Studio)
 Articles(Japanese)/            日本語の記事、図、ベンチマークのデータ
 Images/                        スクリーンショットとアニメーション
 ```
@@ -122,7 +129,7 @@ Images/                        スクリーンショットとアニメーショ�
 - `Random`: `std::random_device` と `std::mt19937` で乱数を作る。
 - `Size`、`Point`、`Rect`: 盤面上の大きさ、座標、矩形を表す。
 - `Utility`: 矩形内の各点を回す汎用ループ (`FAST` が未定義のときに使う)。
-- `ThreadUtility`: 整数の範囲をスレッドに分けて処理する (`MT` が定義されているときに使う)。
+- `ThreadPool`: ゲームの間ずっと残しておくスレッドで、整数の範囲を分けて処理する (`MT` が定義されているときに使う)。
 - `Pattern`、`PatternSet`: 初期パターンを表し、Life 1.05 形式と RLE 形式のファイルから読み込む。
 - `BitCellSet`: 1 セルを 1 ビットで持つセルの集合。ビット配置は 1bpp のビットマップに合わせてある。
 - `Board`: 盤面。`USEBITS` が定義されていれば `BitCellSet` を継承し、未定義なら行ごとの `bool` 配列を使う。

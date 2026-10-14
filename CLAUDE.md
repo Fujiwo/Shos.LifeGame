@@ -21,6 +21,10 @@ C++20 と Win32 API だけで書いた高速ライフゲーム (B3/S23)。最適
       && /tmp/t Shos.LifeGame/CellData
   ```
   個々のテストを選んで実行する仕組みはない。`Run()` のテスト一覧で、対象外の行をコメントにする。
+- **ベンチマーク (Linux/WSL, g++)**: `Game::Next` の速さを `-O2` で測る。WSL では値が 2 倍程度ぶれることがあるので、比べるときは同じ時間帯に交互に測る。
+  ```
+  ./Shos.LifeGame.Test/run_benchmark.sh --scale 0.25 FAST_MT_AREA USEBITS_FAST_MT_AREA
+  ```
 - `Shos.LifeGame.Test/Shos.LifeGame.Test.cpp` (Visual Studio のテストプロジェクト) は、正しさを検証しないベンチマークである。
 - Linux でビルドできるのは `ShosLifeGame.h` と `ShosHelper.h` だけである。`ShosWin32.h`、`ShosLifeGameBoardPainter.h`、`Shos.LifeGame.cpp` は MSVC でしかコンパイルできない。これらを変更した場合は、Windows での確認が必要であることを利用者に伝える。
 
@@ -28,8 +32,8 @@ C++20 と Win32 API だけで書いた高速ライフゲーム (B3/S23)。最適
 
 ### 最適化の `#define` (`ShosLifeGame.h` の冒頭)
 - `USEBITS`: `Board` が `BitCellSet` (1 セル 1 ビット) を継承する。未定義の場合は、行ごとの `bool` 配列 (`std::vector<std::unique_ptr<bool[]>>`) を使う別実装の `Board` になる。2 つの `Board` は同じインターフェイス (`Get`/`Set`/`SetOnly`/`GetArea`/`SetArea`/`GetBits`) を持つ必要がある。
-- `FAST`: `std::function` を使う汎用ループ (`Utility::ForEach`) の代わりに、直接のループを使う。
-- `MT`: 計算する範囲を行 (Y 方向) で分け、スレッドごとに `NextPart` を実行する。`AREA` も有効なら、スレッドごとに範囲 (`areas[index]`) を持ち、最後に `Rect::Union` でまとめる。
+- `FAST`: `std::function` を使う汎用ループ (`Utility::ForEach`) の代わりに、直接のループを使う。次の世代は `Game::NextRow` で行単位に計算する。`Board` の行アクセス (`GetRow`/`Get(row, x)`/`RowWriter`/`ClearRow`) は、2 つの `Board` で同じ形にそろえる。
+- `MT`: 計算する範囲を行 (Y 方向) で分け、`ThreadPool` のスレッドごとに `NextPart` を実行する。スレッドは `Game` の生成時に作り、世代ごとの開始と終了を `std::barrier` で同期する。1 スレッドあたりのセル数が `Game::minimumCellNumberPerThread` より少ないときは、スレッドの数を減らす。`AREA` も有効なら、スレッドごとに範囲 (`areas[index]`) を持ち、最後に `Rect::Union` でまとめる。
 - `AREA`: 活動範囲だけを計算する。
 - `SHOS_LIFEGAME_CUSTOM_CONFIG` を定義すると、冒頭の `#define` が無効になり、外部 (テスト) から組み合わせを指定できる。
 - コードを変えるときは、16 通りすべてで回帰テストが通ることを確認する。どの経路も `#if` で分かれているので、使っていない組み合わせが壊れても気付きにくい。
@@ -41,9 +45,9 @@ C++20 と Win32 API だけで書いた高速ライフゲーム (B3/S23)。最適
 - Debug ビルド (`_DEBUG`) では、`Game::Test` が毎世代この不変条件を `assert` で確かめる。テストスクリプトは `-D_DEBUG` を付けてビルドする。
 
 ### ビット配置と描画の約束 (`BitCellSet` と `BoardPainter`)
-- `GetBits()` が返すビット列は、そのまま 1bpp のモノクロビットマップとして `CreateBitmapIndirect` に渡される。
+- `GetBits()` が返すビット列は、そのまま `SetBitmapBits` で 1bpp のモノクロビットマップに書き込まれる。
 - そのため、各バイトの最上位ビット (MSB) を左端のピクセルにする (`ToIndex`)。また、1 行のバイト数は WORD 境界にそろえる (`BitCellSet::GetRowByteNumber`)。
-- ビット配置を変える場合は、`ToIndex`、`GetRowByteNumber`、`bmWidthBytes` の 3 か所をそろえて変える。テスト `BitmapMatchesBoard` は、この約束を検証している。
+- ビット配置を変える場合は、`ToIndex`、`GetRowByteNumber`、`BitCellSet::Get(row, x)`/`RowWriter`/`ClearRow`、`BoardPainter::Paint` の `SetBitmapBits` のバイト数をそろえて変える。テスト `BitmapMatchesBoard` は、この約束を検証している。
 
 ### パターンファイル (`PatternSet`)
 - 作業ディレクトリーの `.\CellData` から読み込む。`_tWinMain` は起動時に、作業ディレクトリーを exe のフォルダーに変える。
@@ -54,7 +58,7 @@ C++20 と Win32 API だけで書いた高速ライフゲーム (B3/S23)。最適
 
 ### Win32 ラッパー (`ShosWin32.h`)
 - メッセージループの方式は、`IDLE`/`TIMER`/`USERMESSAGE` の `#define` で選ぶ。有効なのは `IDLE` だけで、`PeekMessage` が空のたびに `OnIdle` で 1 世代を進める。そのため CPU を 1 コア使い続けるが、これは FPS を計測するための意図した動作である。
-- タイトルバーに表示する FPS は、記事のベンチマークの数値の出どころである。描画や `SetWindowText` の頻度を変えると、記事の数値と比べられなくなる。
+- タイトルバーに表示する FPS は、記事のベンチマークの数値の出どころである。描画や `SetWindowText` の頻度を変えると、記事の数値と比べられなくなる。タイトルの更新は 0.1 秒に 1 回に間引いている (`MainWindow::IsTitleToBeUpdated`)。そのため、記事の数値は測り直しが必要である。
 
 ## テストの書き方
 
