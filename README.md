@@ -33,11 +33,11 @@ The four `#define`s at the top of [Shos.LifeGame/ShosLifeGame.h](Shos.LifeGame/S
 | `#define` | What it does | Trade-off |
 |---|---|---|
 | `USEBITS` | Stores one cell in one bit (`BitCellSet`). When undefined, each row is an array of `bool`. | Bit operations are harder to read than `bool` arrays. |
-| `FAST` | Uses direct loops instead of a generic loop with `std::function` (`Utility::ForEach`). | Some code is duplicated. |
-| `MT` | Splits the rows (Y direction) among threads, and each thread runs `NextPart`. | Less effective on small boards. |
+| `FAST` | Uses direct loops instead of a generic loop with `std::function` (`Utility::ForEach`). The next generation is computed row by row (`Game::NextRow`): the sum of the 3 cells in a column is shared by the neighboring cells. | Some code is duplicated. |
+| `MT` | Splits the rows (Y direction) among the threads of `ThreadPool`, and each thread runs `NextPart`. The threads are kept for the whole game, and a small area is computed by fewer threads. | Less effective on small boards. |
 | `AREA` | Computes only the active area: the bounding box of the live cells plus a margin of one cell. | Managing the area is complex. Less effective when the cells spread over the board. |
 
-Besides these four, `BoardPainter` ([Shos.LifeGame/ShosLifeGameBoardPainter.h](Shos.LifeGame/ShosLifeGameBoardPainter.h)) optimizes drawing. When `USEBITS` is defined, `BoardPainter` passes the bits of the board directly to `CreateBitmapIndirect` and draws them with `BitBlt`. To make this possible, the bit layout of `BitCellSet` follows the 1bpp bitmap format: the most significant bit of each byte is the leftmost pixel, and each row is aligned to a WORD boundary.
+Besides these four, `BoardPainter` ([Shos.LifeGame/ShosLifeGameBoardPainter.h](Shos.LifeGame/ShosLifeGameBoardPainter.h)) optimizes drawing. When `USEBITS` is defined, `BoardPainter` writes the bits of the board directly to a bitmap with `SetBitmapBits`, and draws it with `BitBlt`. The bitmap is created once and reused. To make this possible, the bit layout of `BitCellSet` follows the 1bpp bitmap format: the most significant bit of each byte is the leftmost pixel, and each row is aligned to a WORD boundary.
 
 ## Benchmark
 
@@ -97,6 +97,13 @@ The files are sorted with Life 1.05 files first and RLE files next, each by file
 ./Shos.LifeGame.Test/run_regression_tests.sh --asan   # with AddressSanitizer and UndefinedBehaviorSanitizer
 ```
 
+[Shos.LifeGame.Test/Shos.LifeGame.Benchmark.cpp](Shos.LifeGame.Test/Shos.LifeGame.Benchmark.cpp) measures `Game::Next` without a window. The script below builds it with `-O2` and runs it for the combinations one by one. Each case is run three times, and the best time is shown.
+
+```
+./Shos.LifeGame.Test/run_benchmark.sh                        # all combinations
+./Shos.LifeGame.Test/run_benchmark.sh --scale 0.1 FAST_MT_AREA USEBITS_FAST_MT_AREA   # fewer generations, some combinations
+```
+
 `Shos.LifeGame.Test/Shos.LifeGame.Test.cpp` (the Visual Studio test project) is a benchmark. It does not check the results.
 
 ## Repository Structure
@@ -110,7 +117,7 @@ Shos.LifeGame/                 The application
   ShosStopwatch.h              Stopwatch
   Shos.LifeGame.cpp            Main window and entry point
   CellData/                    Pattern files (.lif/.rle)
-Shos.LifeGame.Test/            Regression tests (g++) and benchmark (Visual Studio)
+Shos.LifeGame.Test/            Regression tests and benchmark (g++), and benchmark (Visual Studio)
 Articles(Japanese)/            Japanese article, figures and benchmark data
 Images/                        Screenshots and animation
 ```
@@ -122,7 +129,7 @@ Images/                        Screenshots and animation
 - `Random`: generates random numbers with `std::random_device` and `std::mt19937`.
 - `Size`, `Point`, `Rect`: size, coordinates and rectangles on the board.
 - `Utility`: generic loop over the points in a rectangle (used when `FAST` is undefined).
-- `ThreadUtility`: splits a range of integers among threads (used when `MT` is defined).
+- `ThreadPool`: threads kept for the whole game, which split a range of integers among them (used when `MT` is defined).
 - `Pattern`, `PatternSet`: initial patterns, and reading them from Life 1.05 and RLE files.
 - `BitCellSet`: a set of cells with one bit per cell, laid out as a 1bpp bitmap.
 - `Board`: the board. It derives from `BitCellSet` when `USEBITS` is defined, and uses rows of `bool` otherwise.
