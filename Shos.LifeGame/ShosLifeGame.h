@@ -495,9 +495,14 @@ private:
 /// <remarks>The base class of Board when USEBITS is defined. Otherwise, Board uses it only to make the bitmap to paint.</remarks>
 class BitCellSet
 {
+    static constexpr Integer       unitBitNumber = Integer(sizeof(UnitInteger) * 8); // Number of the cells in a unit (byte)
+
     const Size                     size;
     const UnsignedInteger          unitNumberX; // Number of the units (bytes) in a row
     std::unique_ptr<UnitInteger[]> cells;
+#if defined(FAST)
+    std::unique_ptr<UnitInteger[]> emptyRow;    // A row of dead cells, for the rows just outside of the board (see GetRow)
+#endif // FAST
 
 #if defined(AREA)
     // The active area: every cell outside of it is dead.
@@ -538,6 +543,9 @@ public:
 
     BitCellSet(const Size& size)
         : size(size), unitNumberX(GetRowByteNumber(size.cx)), cells(std::make_unique<UnitInteger[]>(GetUnitNumber()))
+#if defined(FAST)
+        , emptyRow(std::make_unique<UnitInteger[]>(unitNumberX))
+#endif // FAST
 #if defined(AREA)
         , area(GetDefaultArea(GetRect()))
 #endif // AREA
@@ -610,6 +618,77 @@ public:
 #if !defined(FAST)
     void ForEach(std::function<void(const Point&)> action, bool areaOnly)
     { Utility::ForEach(areaOnly ? GetArea() : GetRect(), action); }
+#else // FAST
+    // Row access for Game::NextRow, which reads and writes the cells row by row without checking each point.
+
+    /// <returns>The row of y, or a row of dead cells if y is outside of the board.</returns>
+    const UnitInteger* GetRow(Integer y) const
+    { return 0 <= y && y < size.cy ? cells.get() + size_t(unitNumberX) * size_t(y) : emptyRow.get(); }
+
+    /// <remarks>Unlike the const one, y must be inside the board.</remarks>
+    UnitInteger* GetRow(Integer y)
+    { return cells.get() + size_t(unitNumberX) * size_t(y); }
+
+    /// <summary>The cell of the row. x must be inside the board.</summary>
+    static bool Get(const UnitInteger* row, Integer x)
+    { return ((row[x / unitBitNumber] >> (unitBitNumber - 1 - x % unitBitNumber)) & 1) != 0; }
+
+    /// <summary>Writes the cells of a row from left to right, one byte at a time instead of one bit at a time.</summary>
+    class RowWriter final
+    {
+        UnitInteger* unit;      // The byte being written
+        Integer      bit;       // The bit of the next cell in the byte
+        UnitInteger  mask  = 0; // The bits written in the byte
+        UnitInteger  value = 0;
+
+    public:
+        RowWriter(UnitInteger* row, Integer x) : unit(row + x / unitBitNumber), bit(unitBitNumber - 1 - x % unitBitNumber)
+        {}
+
+        void Write(bool alive)
+        {
+            mask  |= UnitInteger(1 << bit);
+            value |= UnitInteger(alive << bit);
+            if (bit-- == 0) {
+                Flush();
+                unit++;
+                bit = unitBitNumber - 1;
+            }
+        }
+
+        /// <summary>Writes the rest of the byte. The bits not written (outside of the area) are kept.</summary>
+        void Flush()
+        {
+            if (mask != 0)
+                *unit = UnitInteger((*unit & ~mask) | value);
+            mask  = 0;
+            value = 0;
+        }
+    };
+
+#if defined(AREA)
+    /// <summary>Kills the cells of the row in [minimumX, maximumX), byte by byte.</summary>
+    void ClearRow(Integer y, Integer minimumX, Integer maximumX)
+    {
+        if (minimumX >= maximumX)
+            return;
+
+        const auto row       = GetRow(y);
+        const auto firstUnit = minimumX       / unitBitNumber;
+        const auto lastUnit  = (maximumX - 1) / unitBitNumber;
+        // The bits from minimumX to the end of its byte, and from the start of the byte to maximumX - 1.
+        const auto firstMask = UnitInteger(UnitInteger(~0U) >> (minimumX % unitBitNumber));
+        const auto lastMask  = UnitInteger(UnitInteger(~0U) << (unitBitNumber - 1 - (maximumX - 1) % unitBitNumber));
+
+        if (firstUnit == lastUnit) {
+            row[firstUnit] &= UnitInteger(~(firstMask & lastMask));
+        } else {
+            row[firstUnit] &= UnitInteger(~firstMask);
+            std::fill(row + firstUnit + 1, row + lastUnit, UnitInteger(0));
+            row[lastUnit ] &= UnitInteger(~lastMask);
+        }
+    }
+#endif // AREA
 #endif // FAST
 
 #if defined(AREA)
@@ -642,11 +721,11 @@ public:
     }
 #endif // AREA
 
-#if !defined(AREA) || !defined(MT)
+#if !defined(AREA)
 protected:
-#endif // !AREA || !MT
+#endif // !AREA
     /// <summary>The whole board.</summary>
-    /// <remarks>Public with AREA and MT, because Game::NextPart calls it.</remarks>
+    /// <remarks>Public with AREA, because Game::NextPart calls it.</remarks>
     Rect GetRect() const
     { return Rect(Point(), size); }
 
@@ -688,6 +767,9 @@ class Board final
     const Size                          size;
     std::vector<std::unique_ptr<bool[]>> cells; // cells[y][x]
     BitCellSet                          bitCellSet; // Only to make the bitmap to paint
+#if defined(FAST)
+    std::unique_ptr<bool[]>             emptyRow;   // A row of dead cells, for the rows just outside of the board (see GetRow)
+#endif // FAST
 
 #if defined(AREA)
     Rect                                area;   // The same as BitCellSet::area
@@ -727,6 +809,9 @@ public:
     }
 
     Board(const Size& size) : size(size), bitCellSet(size)
+#if defined(FAST)
+        , emptyRow(std::make_unique<bool[]>(size_t(size.cx)))
+#endif // FAST
 #if defined(AREA)
         , area(BitCellSet::GetDefaultArea(GetRect()))
 #endif // AREA
@@ -777,6 +862,45 @@ public:
 #endif // AREA
             GetRect(), action);
     }
+#else // FAST
+    // Row access for Game::NextRow (see BitCellSet::GetRow).
+
+    /// <returns>The row of y, or a row of dead cells if y is outside of the board.</returns>
+    const bool* GetRow(Integer y) const
+    { return 0 <= y && y < size.cy ? cells[size_t(y)].get() : emptyRow.get(); }
+
+    /// <remarks>Unlike the const one, y must be inside the board.</remarks>
+    bool* GetRow(Integer y)
+    { return cells[size_t(y)].get(); }
+
+    /// <summary>The cell of the row. x must be inside the board.</summary>
+    static bool Get(const bool* row, Integer x)
+    { return row[x]; }
+
+    /// <summary>Writes the cells of a row from left to right (see BitCellSet::RowWriter).</summary>
+    class RowWriter final
+    {
+        bool* cell;
+
+    public:
+        RowWriter(bool* row, Integer x) : cell(row + x)
+        {}
+
+        void Write(bool alive)
+        { *cell++ = alive; }
+
+        void Flush()
+        {}
+    };
+
+#if defined(AREA)
+    /// <summary>Kills the cells of the row in [minimumX, maximumX).</summary>
+    void ClearRow(Integer y, Integer minimumX, Integer maximumX)
+    {
+        if (minimumX < maximumX)
+            std::fill(GetRow(y) + minimumX, GetRow(y) + maximumX, false);
+    }
+#endif // AREA
 #endif // FAST
 
     /// <summary>Counts the alive cells among the 8 neighbors. Cells outside the board are dead.</summary>
@@ -907,6 +1031,10 @@ public:
 #endif // FAST
     }
 
+#if defined(FAST)
+    using BitCellSet::Get; // Get(row, x) for Game::NextRow
+#endif // FAST
+
     bool Get(const Point& point) const
     { return BitCellSet::Get(point); }
 
@@ -983,7 +1111,13 @@ public:
 
 #elif defined(FAST)
         const auto area = mainBoard->GetArea();
+#if defined(AREA)
+        auto nextArea = BitCellSet::GetEmptyArea(mainBoard->GetSize());
+        NextPart(area.leftTop, area.RightBottom(), nextArea);
+        subBoard->SetArea(nextArea);
+#else // AREA
         NextPart(area.leftTop, area.RightBottom());
+#endif // AREA
 #else // FAST
         mainBoard->ForEach([&](const Point& point) {
             const auto aliveNeighborCount = mainBoard->GetAliveNeighborCount(point);
@@ -1070,17 +1204,112 @@ private:
 
     static void ClearRow(Board& board, Integer y, Integer minimumX, Integer maximumX)
     {
+#if defined(FAST)
+        board.ClearRow(y, minimumX, maximumX);
+#else // FAST
         for (auto x = minimumX; x < maximumX; x++)
             board.SetOnly(Point(x, y), false);
+#endif // FAST
     }
 #endif // AREA
 
-#if defined(AREA) && defined(MT)
-    /// <summary>Computes the next generation of the cells in [minimum, maximum). Called by each thread.</summary>
-    /// <param name="area">The area of the thread, extended by the alive cells.</param>
-    /// <remarks>SetOnly is used so that the area of subBoard shared by the threads is not updated.</remarks>
+#if defined(FAST)
+    /// <summary>Computes the next generation of the row y in [minimumX, maximumX) without checking each point.</summary>
+    /// <param name="firstAliveX">The x of the first cell alive in the next generation, or -1 if no cells are alive.</param>
+    /// <param name="lastAliveX" >The x of the last cell alive in the next generation, or -1 if no cells are alive.</param>
+    /// <remarks>
+    /// The sum of the 3 cells in a column (the column sum) is shared by the 3 cells in a row.
+    /// So that each cell reads only the 3 cells of the column on its right, instead of its 8 neighbors.
+    /// The cells outside of the board are dead: the rows outside are rows of dead cells (see Board::GetRow), and the columns outside are 0.
+    /// </remarks>
+    void NextRow(Integer y, Integer minimumX, Integer maximumX, Integer& firstAliveX, Integer& lastAliveX)
+    {
+        firstAliveX = lastAliveX = -1;
+        if (minimumX >= maximumX)
+            return;
+
+        const auto upperRow  = std::as_const(*mainBoard).GetRow(y - 1);
+        const auto row       = std::as_const(*mainBoard).GetRow(y    );
+        const auto lowerRow  = std::as_const(*mainBoard).GetRow(y + 1);
+        const auto columnSum = [&](Integer x) {
+            return UnsignedInteger(Board::Get(upperRow, x)) + UnsignedInteger(Board::Get(row, x)) + UnsignedInteger(Board::Get(lowerRow, x));
+        };
+
+        Board::RowWriter writer(subBoard->GetRow(y), minimumX);
+        auto leftColumnSum   = minimumX > 0 ? columnSum(minimumX - 1) : 0U;
+        auto centerColumnSum = columnSum(minimumX);
+
+        const auto next = [&](Integer x, UnsignedInteger rightColumnSum) {
+            // The sum of the 3x3 cells includes the cell itself:
+            // 3 means 3 neighbors (born or survives), and 4 with the cell alive means 3 neighbors (survives).
+            const auto sum   = leftColumnSum + centerColumnSum + rightColumnSum;
+            const auto alive = sum == 3 || (sum == 4 && Board::Get(row, x));
+            writer.Write(alive);
+            if (alive) {
+                if (firstAliveX < 0)
+                    firstAliveX = x;
+                lastAliveX = x;
+            }
+            leftColumnSum   = centerColumnSum;
+            centerColumnSum = rightColumnSum;
+        };
+
+        // The right column is inside the board, except for the last cell of the board.
+        const auto innerMaximumX = std::min(maximumX, mainBoard->GetSize().cx - 1);
+        auto       x             = minimumX;
+        for (; x < innerMaximumX; x++)
+            next(x, columnSum(x + 1));
+        if (x < maximumX)
+            next(x, 0U);
+
+        writer.Flush();
+    }
+
+#if defined(AREA)
+    /// <summary>Computes the next generation of the cells in [minimum, maximum). Called by each thread with MT.</summary>
+    /// <param name="area">The area extended by the alive cells.</param>
+    /// <remarks>
+    /// The area is extended once a row by the first and the last alive cells, instead of every alive cell.
+    /// With MT, it is extended in a local variable and written once, so that the threads do not write the same cache line again and again.
+    /// </remarks>
     void NextPart(const Point& minimum, const Point& maximum, Rect& area)
     {
+        const auto rect     = mainBoard->GetRect();
+        auto       nextArea = area;
+        for (auto y = minimum.y; y < maximum.y; y++) {
+            Integer firstAliveX;
+            Integer lastAliveX;
+            NextRow(y, minimum.x, maximum.x, firstAliveX, lastAliveX);
+            if (firstAliveX >= 0) {
+                nextArea = BitCellSet::Union(nextArea, rect, Point(firstAliveX, y));
+                nextArea = BitCellSet::Union(nextArea, rect, Point(lastAliveX , y));
+            }
+        }
+        area = nextArea;
+    }
+#else // AREA
+    /// <summary>Computes the next generation of the cells in [minimum, maximum). Called by each thread with MT.</summary>
+    void NextPart(const Point& minimum, const Point& maximum)
+    {
+        for (auto y = minimum.y; y < maximum.y; y++) {
+            Integer firstAliveX;
+            Integer lastAliveX;
+            NextRow(y, minimum.x, maximum.x, firstAliveX, lastAliveX);
+        }
+    }
+#endif // AREA
+#elif defined(MT)
+#if defined(AREA)
+    /// <summary>Computes the next generation of the cells in [minimum, maximum). Called by each thread.</summary>
+    /// <param name="area">The area of the thread, extended by the alive cells.</param>
+    /// <remarks>
+    /// SetOnly is used so that the area of subBoard shared by the threads is not updated.
+    /// The area is extended in a local variable and written once, so that the threads do not write the same cache line again and again.
+    /// </remarks>
+    void NextPart(const Point& minimum, const Point& maximum, Rect& area)
+    {
+        const auto rect     = mainBoard->GetRect();
+        auto       nextArea = area;
         Point point;
         for (point.y = minimum.y; point.y < maximum.y; point.y++) {
             for (point.x = minimum.x; point.x < maximum.x; point.x++) {
@@ -1089,11 +1318,12 @@ private:
                 subBoard->SetOnly(point, alive);
 
                 if (alive)
-                    area = BitCellSet::Union(area, mainBoard->GetRect(), point);
+                    nextArea = BitCellSet::Union(nextArea, rect, point);
             }
         }
+        area = nextArea;
     }
-#elif defined(FAST) || defined(MT)
+#else // AREA
     /// <summary>Computes the next generation of the cells in [minimum, maximum).</summary>
     void NextPart(const Point& minimum, const Point& maximum)
     {
@@ -1105,6 +1335,7 @@ private:
             }
         }
     }
+#endif // AREA
 #endif // FAST
 
 #if defined(_DEBUG)

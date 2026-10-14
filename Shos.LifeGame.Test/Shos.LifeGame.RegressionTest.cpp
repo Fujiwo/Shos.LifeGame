@@ -437,6 +437,11 @@ void RandomBoardMatchesReference()
         { Size(40, 64),  2U, 50 },
         { Size(24,  8),  3U, 30 },
         { Size(72, 72),  4U, 10 },
+        // Widths that are not a multiple of 8: the last byte of a row is partly outside of the board.
+        { Size(37, 23),  5U, 40 },
+        { Size(13,  9),  6U, 45 },
+        { Size( 1,  7),  7U, 60 },
+        { Size( 9,  1),  8U, 60 },
     };
     for (const auto& testCase : cases) {
         const auto cells = MakeRandomCells(testCase.size, testCase.seed, testCase.percentage);
@@ -445,6 +450,27 @@ void RandomBoardMatchesReference()
         ReferenceGame reference(testCase.size, cells);
 
         for (auto generation = 0; generation < 80; generation++) {
+            game.Next();
+            reference.Next();
+            CHECK_EQ(reference.GetAliveCells(), GetAliveCells(game.GetBoard()));
+        }
+    }
+}
+
+void SparseBoardMatchesReference()
+{
+    // A few cells on a board wider than the area: the edges of the area are in the middle of the bytes.
+    const struct { Size size; unsigned int seed; int percentage; } cases[] = {
+        { Size(45, 37), 11U, 3 },
+        { Size(83, 29), 12U, 2 },
+    };
+    for (const auto& testCase : cases) {
+        const auto cells = MakeRandomCells(testCase.size, testCase.seed, testCase.percentage);
+        Game       game(testCase.size);
+        Place(game, cells);
+        ReferenceGame reference(testCase.size, cells);
+
+        for (auto generation = 0; generation < 120; generation++) {
             game.Next();
             reference.Next();
             CHECK_EQ(reference.GetAliveCells(), GetAliveCells(game.GetBoard()));
@@ -697,6 +723,7 @@ int Run()
         { "GliderMovesDiagonally"                    , Expect::Pass    , ""   , GliderMovesDiagonally                   },
         { "GenerationIsCounted"                      , Expect::Pass    , ""   , GenerationIsCounted                     },
         { "ResetRestartsGeneration"                  , Expect::Pass    , ""   , ResetRestartsGeneration                 },
+        { "SparseBoardMatchesReference"              , Expect::Pass    , ""   , SparseBoardMatchesReference             },
         { "OutsideOfBoardIsDead"                     , Expect::Pass    , ""   , OutsideOfBoardIsDead                    },
         { "GliderVanishesAtCorner"                   , Expect::Pass    , ""   , GliderVanishesAtCorner                  },
         { "PatternIsCentered"                        , Expect::Pass    , ""   , PatternIsCentered                       },
