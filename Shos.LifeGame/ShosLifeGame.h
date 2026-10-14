@@ -12,6 +12,7 @@
 #include <functional>
 #include <tuple>
 #if defined(MT)
+#include <barrier>
 #include <concepts>
 #include <thread>
 #endif // MT
@@ -173,29 +174,94 @@ public:
 #endif // FAST
 
 #if defined(MT)
-class ThreadUtility final
+/// <summary>Threads that wait for the work of each generation, so that no thread is created every generation.</summary>
+/// <remarks>The calling thread also works as the thread of index 0.</remarks>
+class ThreadPool final
 {
-public:
-    /// <summary>Splits [minimum, maximum) into ranges, and calls action(begin, end, threadIndex) for each range in its own thread.</summary>
-    template <std::invocable<Integer, Integer, unsigned int> TAction>
-    static void ForEach(Integer minimum, Integer maximum, const TAction& action)
-    {
-        const auto                hardwareConcurrency = GetHardwareConcurrency();
-        const Integer             size                = maximum - minimum;
-        std::vector<std::jthread> threads;
+    using Invoker = void (*)(const void* action, Integer begin, Integer end, unsigned int threadIndex);
 
-        for (auto threadIndex = 0U; threadIndex < hardwareConcurrency; threadIndex++) {
-            const auto begin = minimum + Integer(size * threadIndex / hardwareConcurrency);
-            const auto end   = minimum + (threadIndex == hardwareConcurrency - 1 ? size
-                                                                                 : Integer(size * (threadIndex + 1) / hardwareConcurrency));
-            threads.emplace_back([=, &action] { action(begin, end, threadIndex); });
-        }
-        // std::jthread joins on destruction.
+    const unsigned int        threadNumber;
+    std::barrier<>            barrier;              // Synchronizes the start and the end of each work
+    // The work. Written by the calling thread before the barrier, and read by the threads after it.
+    const void*               action       = nullptr;
+    Invoker                   invoker      = nullptr;
+    Integer                   minimum      = 0;
+    Integer                   size         = 0;
+    unsigned int              partNumber   = 0;
+    bool                      isStopping   = false;
+    std::vector<std::jthread> threads;              // Declared last, so that they are joined before the others are destroyed
+
+public:
+    ThreadPool() : threadNumber(GetHardwareConcurrency()), barrier(std::ptrdiff_t(threadNumber))
+    {
+        for (auto threadIndex = 1U; threadIndex < threadNumber; threadIndex++)
+            threads.emplace_back([this, threadIndex] { Work(threadIndex); });
     }
 
+    ~ThreadPool()
+    {
+        isStopping = true;
+        barrier.arrive_and_wait(); // Wakes the threads up to stop. std::jthread joins on destruction.
+    }
+
+    ThreadPool(const ThreadPool&)            = delete;
+    ThreadPool& operator=(const ThreadPool&) = delete;
+
+    unsigned int GetThreadNumber() const
+    { return threadNumber; }
+
+    /// <summary>Splits [minimum, maximum) into ranges, and calls action(begin, end, threadIndex) for each range in its own thread.</summary>
+    /// <param name="minimumSizePerThread">
+    /// A range smaller than this is not worth waking a thread up: such a small work is done by fewer threads, or only by the calling thread.
+    /// </param>
+    /// <remarks>Returns after all the ranges have been done.</remarks>
+    template <std::invocable<Integer, Integer, unsigned int> TAction>
+    void ForEach(Integer minimum, Integer maximum, Integer minimumSizePerThread, const TAction& action)
+    {
+        const auto size       = maximum - minimum;
+        const auto partNumber = unsigned(std::clamp(size / minimumSizePerThread, 1, Integer(threadNumber)));
+        if (partNumber == 1U) {
+            action(minimum, maximum, 0U);
+            return;
+        }
+
+        this->action     = &action;
+        this->invoker    = [](const void* action, Integer begin, Integer end, unsigned int threadIndex) {
+            (*static_cast<const TAction*>(action))(begin, end, threadIndex);
+        };
+        this->minimum    = minimum;
+        this->size       = size;
+        this->partNumber = partNumber;
+
+        barrier.arrive_and_wait(); // Start
+        Run(0U);
+        barrier.arrive_and_wait(); // End
+    }
+
+private:
     /// <remarks>std::thread::hardware_concurrency() may return 0 when it is unknown.</remarks>
     static unsigned int GetHardwareConcurrency()
     { return std::max(std::thread::hardware_concurrency(), 1U); }
+
+    void Work(unsigned int threadIndex)
+    {
+        for (;;) {
+            barrier.arrive_and_wait(); // Start
+            if (isStopping)
+                return;
+            Run(threadIndex);
+            barrier.arrive_and_wait(); // End
+        }
+    }
+
+    void Run(unsigned int threadIndex) const
+    {
+        if (threadIndex >= partNumber)
+            return;
+        const auto begin = minimum + Integer(size * Integer(threadIndex    ) / Integer(partNumber));
+        const auto end   = minimum + Integer(size * Integer(threadIndex + 1) / Integer(partNumber));
+        invoker(action, begin, end, threadIndex);
+    }
 };
 #endif // MT
 
@@ -1047,12 +1113,25 @@ public:
 /// <remarks>The next generation is computed from mainBoard into subBoard, and then the boards are swapped.</remarks>
 class Game final
 {
+#if defined(MT)
+    // Fewer cells than this for a thread are not worth waking the thread up (see ThreadPool::ForEach).
+    // The values were measured with Shos.LifeGame.Benchmark: a cell costs much more without FAST.
+#if defined(FAST)
+    static constexpr Integer minimumCellNumberPerThread = 65536;
+#else // FAST
+    static constexpr Integer minimumCellNumberPerThread = 1024;
+#endif // FAST
+
+#endif // MT
     Random                 random;
     std::unique_ptr<Board> mainBoard;    // The current generation
     std::unique_ptr<Board> subBoard;     // The next generation
     unsigned long long     generation = 0ULL;
     PatternSet             patternSet;
     std::optional<size_t>  patternIndex; // None when the board is random
+#if defined(MT)
+    ThreadPool             threadPool;
+#endif // MT
 #if defined(AREA) && defined(MT)
     std::vector<Rect>      areas; // One for each thread
 #endif // AREA && MT
@@ -1072,7 +1151,7 @@ public:
 
     Game(const Size& size) : mainBoard(std::make_unique<Board>(size)), subBoard(std::make_unique<Board>(size))
 #if defined(AREA) && defined(MT)
-        , areas(ThreadUtility::GetHardwareConcurrency())
+        , areas(threadPool.GetThreadNumber())
 #endif // AREA && MT
     { Randomize(); }
 
@@ -1089,22 +1168,23 @@ public:
 #endif // AREA
 
 #if defined(MT)
-        const auto area            = mainBoard->GetArea();
-        const auto areaRightBottom = area.RightBottom();
+        const auto area                      = mainBoard->GetArea();
+        const auto areaRightBottom           = area.RightBottom();
+        const auto minimumRowNumberPerThread = std::max(1, minimumCellNumberPerThread / std::max(1, area.size.cx));
 
 #if defined(AREA)
         // Each thread extends its own area, not the area of subBoard, to avoid a data race.
         // The areas are merged after all the threads have joined.
         std::ranges::fill(areas, BitCellSet::GetEmptyArea(mainBoard->GetSize()));
 
-        ThreadUtility::ForEach(area.leftTop.y, areaRightBottom.y, [=, this](Integer minimum, Integer maximum, unsigned int index) {
+        threadPool.ForEach(area.leftTop.y, areaRightBottom.y, minimumRowNumberPerThread, [=, this](Integer minimum, Integer maximum, unsigned int index) {
             NextPart(Point(area.leftTop.x, minimum), Point(areaRightBottom.x, maximum), areas[index]);
         });
 
         subBoard->SetArea(Rect::Union(areas));
 
 #else // AREA
-        ThreadUtility::ForEach(area.leftTop.y, areaRightBottom.y, [=, this](Integer minimum, Integer maximum, unsigned int) {
+        threadPool.ForEach(area.leftTop.y, areaRightBottom.y, minimumRowNumberPerThread, [=, this](Integer minimum, Integer maximum, unsigned int) {
             NextPart(Point(area.leftTop.x, minimum), Point(areaRightBottom.x, maximum));
         });
 #endif // AREA

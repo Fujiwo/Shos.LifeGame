@@ -478,6 +478,16 @@ void SparseBoardMatchesReference()
     }
 }
 
+void GameIsCreatedAndDestroyedRepeatedly()
+{
+    // With MT, each game starts and stops its threads: they must not hang or crash.
+    for (auto count = 0; count < 50; count++) {
+        Game game(Size(64, 64));
+        game.Next();
+        game.Next();
+    }
+}
+
 void ResetRestartsGeneration()
 {
     Game game(Size(16, 16));
@@ -723,6 +733,7 @@ int Run()
         { "GliderMovesDiagonally"                    , Expect::Pass    , ""   , GliderMovesDiagonally                   },
         { "GenerationIsCounted"                      , Expect::Pass    , ""   , GenerationIsCounted                     },
         { "ResetRestartsGeneration"                  , Expect::Pass    , ""   , ResetRestartsGeneration                 },
+        { "GameIsCreatedAndDestroyedRepeatedly"      , Expect::Pass    , ""   , GameIsCreatedAndDestroyedRepeatedly     },
         { "SparseBoardMatchesReference"              , Expect::Pass    , ""   , SparseBoardMatchesReference             },
         { "OutsideOfBoardIsDead"                     , Expect::Pass    , ""   , OutsideOfBoardIsDead                    },
         { "GliderVanishesAtCorner"                   , Expect::Pass    , ""   , GliderVanishesAtCorner                  },
